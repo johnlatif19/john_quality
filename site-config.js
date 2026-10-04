@@ -6,8 +6,8 @@ window.RTX.VIDEO_LQ = "https://files.catbox.moe/5s1mq1.mp4";
 
 /* Firebase Web Config — from Project Settings → General → Your apps */
 window.RTX.FIREBASE = {
-  apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXX",
-  authDomain: "john-quality-xxxxx.firebaseapp.com",
-  projectId: "john-quality-xxxxx",
-  appId: "1:123456789:web:abcdef1234567890",
+  apiKey: "AIzaSyCN2ihjSklEZxbetrp8Z7J4Aw-vhYWqjg0",
+  authDomain: "john-quality.firebaseapp.com",
+  projectId: "john-quality",
+  appId: "1:729288909557:web:cbe728521641e3c9295bbc",
 };
