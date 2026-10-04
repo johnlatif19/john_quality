@@ -4,20 +4,12 @@
   "builds": [
     { "src": "server.js", "use": "@vercel/node" },
     { "src": "assets/**", "use": "@vercel/static" },
-    { "src": "**/*.{html,js,json,css,jpg,jpeg,png,svg,ico,webp,woff,woff2,ttf}", "use": "@vercel/static" }
+    { "src": "*.{html,js,json,css,jpg,jpeg,png,svg,ico,webp,woff,woff2,ttf}", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/server.js" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/api/(.*)", "dest": "/server.js" },
     { "src": "/(.*)\\.(js|css|json|jpg|jpeg|png|svg|ico|webp|woff|woff2|ttf)", "dest": "/$1" },
     { "src": "/(.*)", "dest": "/server.js" }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
-      ]
-    }
   ]
 }
