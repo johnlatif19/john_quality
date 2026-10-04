@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    JOHN_QUALITY — shared.js · all pages
-   Google Sign-In (Firebase) · Unlimited · Server-side patching
+   Google Sign-In (Firebase) · Unlimited · Railway + multipart upload
    ═══════════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
@@ -484,7 +484,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     PATCHER — Server-side only
+     PATCHER — multipart upload to the server (multer endpoint)
      ═══════════════════════════════════════════════════════════════ */
   function initPatcher() {
     const input = $("#fileInput"), zone = $("#dropZone"), runBtn = $("#runBtn"), dlBtn = $("#dlBtn"), clearBtn = $("#clearBtn");
@@ -811,7 +811,7 @@
             xhr.send(fd);
           });
 
-          if (!(blob instanceof Blob)) throw new Error("Empty response.");
+          if (!(blob instanceof Blob) || blob.size === 0) throw new Error("Empty response from optimizer.");
           stopFinalizeAnim();
 
           $("#progressFill").style.width = "100%";
