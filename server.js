@@ -679,16 +679,18 @@ app.use((err, req, res, next) => {
 });
 
 /* ── Boot ───────────────────────────────────────────────────── */
-app.listen(PORT, () => {
-  console.log("╔══════════════════════════════════════════════╗");
-  console.log("║     JOHN_QUALITY Backend v2.0                ║");
-  console.log("║     Google Auth · Firestore · Cloudinary     ║");
-  console.log("╚══════════════════════════════════════════════╝");
-  console.log(`  Port         : ${PORT}`);
-  console.log(`  Public URL   : ${PUBLIC_BASE}`);
-  console.log(`  Firebase     : ${firebaseReady ? "✓" : "✗"}`);
-  console.log(`  Cloudinary   : ${cloudinaryReady() ? "✓" : "✗"}`);
-  console.log("");
-});
+if (require.main === module || process.env.VERCEL !== "1") {
+  app.listen(PORT, () => {
+    console.log("╔══════════════════════════════════════════════╗");
+    console.log("║     JOHN_QUALITY Backend v2.0                ║");
+    console.log("║     Google Auth · Firestore · Cloudinary     ║");
+    console.log("╚══════════════════════════════════════════════╝");
+    console.log(`  Port         : ${PORT}`);
+    console.log(`  Public URL   : ${PUBLIC_BASE}`);
+    console.log(`  Firebase     : ${firebaseReady ? "✓" : "✗"}`);
+    console.log(`  Cloudinary   : ${cloudinaryReady() ? "✓" : "✗"}`);
+    console.log("");
+  });
+}
 
 module.exports = app;
