@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JOHN_QUALITY — Optimize Videos to Bypass Compression</title>
+<meta name="robots" content="index, follow"/>
+<meta name="description" content="Free video optimizer. Optimize MP4/MOV files so TikTok applies less compression — keep 4K, 120fps and original quality. No re-encoding, processed on our secure servers."/>
+<meta name="theme-color" content="#050506"/>
+<link rel="canonical" href="https://www.johnquality.xyz/patcher"/>
+<!-- Open Graph -->
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="JOHN_QUALITY"/>
+<meta property="og:url" content="https://www.johnquality.xyz/patcher"/>
+<meta property="og:title" content="JOHN_QUALITY — Optimize Videos to Bypass Compression"/>
+<meta property="og:description" content="Optimize MP4/MOV files so TikTok applies less compression — keep 4K, 120fps and original quality. No re-encoding, processed on our secure servers."/>
+<meta property="og:image" content="https://www.johnquality.xyz/assets/banner.png"/>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="JOHN_QUALITY — Optimize Videos to Bypass Compression"/>
+<meta name="twitter:description" content="Optimize MP4/MOV files so TikTok applies less compression — keep 4K, 120fps and original quality. No re-encoding."/>
+<meta name="twitter:image" content="https://www.johnquality.xyz/assets/banner.png"/>
+<!-- Structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "JOHN_QUALITY Video Optimizer",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Web",
+  "url": "https://www.johnquality.xyz/patcher",
+  "description": "Free video optimizer that optimizes MP4/MOV metadata so TikTok applies less compression, preserving up to 4K 120fps quality without re-encoding.",
+  "keywords": "TikTok no compression upload, TikTok quality upload, TikTok 120 FPS method, TikTok upload 120 FPS, TikTok no compression, JOHN_QUALITY, How to upload in TikTok with 4K quality, How to upload in TikTok without compression, Instagram no compression upload, TikTok video optimizer, bypass TikTok compression, Gaming, RTX 5090 gaming, JOHN_QUALITY YouTube, Editing news TikTok method, Editing news quality upload, JOHN_QUALITY Method",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+<script>document.documentElement.classList.add("js");</script>
+<link rel="icon" type="image/jpeg" href="assets/logo.jpg"/>
+<link rel="stylesheet" href="assets/shared.css?v=28"/>
+<script src="assets/rtx-patch-local.js?v=100"></script>
+<style>
+  #dlBtn {
+    background: #22c55e;
+    border: none;
+    border-radius: 14px;
+    padding: 16px 30px;
+    font-size: 15px;
+    font-weight: 800;
+    color: #0b0b0f;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(34,197,94,0.35);
+    transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+  }
+  #dlBtn svg { stroke: #ffffff; width: 20px; height: 20px; }
+  #dlBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(34,197,94,0.45); }
+  #dlBtn:disabled {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.25);
+    box-shadow: none;
+  }
+  #dlBtn:disabled svg { stroke: rgba(255,255,255,0.25); }
+  #againBtn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 14px;
+    padding: 16px 26px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #e5e5ea;
+    gap: 8px;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  #againBtn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+  #againBtn svg { width: 17px; height: 17px; }
+  .socials-section { width:100%; max-width:1000px; margin:18px auto 0; padding:0 clamp(14px,3vw,22px); text-align:center; }
+  .socials-title { font-size:18px; font-weight:700; margin-bottom:16px; color:var(--text,#e6edf3); }
+  .socials-row { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+  .socials-row > :last-child { grid-column: 2; }
+  .social-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; min-width:0; box-sizing:border-box; white-space:normal; text-align:center; padding:10px 6px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:var(--text,#c9d1d9); text-decoration:none; font-size:13px; font-weight:600; transition:background .2s; }
+  .social-btn:hover { background:rgba(255,255,255,0.14); }
+  .social-btn svg { width:18px; height:18px; flex:none; }
+  @media (min-width:768px) {
+    .socials-row { display:flex; flex-wrap:wrap; justify-content:center; }
+    .social-btn { width:auto; flex:0 1 auto; padding:16px 18px; font-size:16px; gap:11px; }
+    .social-btn svg { width:24px; height:24px; }
+  }
+  @media (min-width:768px) and (max-width:1199px) {
+    .social-btn { padding:16px 14px; font-size:14px; gap:9px; }
+  }
+  @media (min-width:1200px) {
+    .socials-section { max-width:1120px; }
+  }
+  .engine-switch{display:flex;width:max-content;max-width:100%;align-items:stretch;gap:4px;padding:4px;background:var(--bg-elevated);border:1px solid var(--border-hi);border-radius:999px;margin:0 auto 14px}
+  .engine-tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:13px 30px;border:0;border-radius:999px;background:transparent;color:var(--text-2);cursor:pointer;font-family:var(--font-display);font-size:19px;font-weight:700;letter-spacing:.04em;line-height:1.25;transition:background .2s var(--ease),color .2s var(--ease),box-shadow .3s var(--ease);white-space:nowrap}
+  .engine-tab-tag{font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+  .engine-tab.is-active{background:linear-gradient(90deg,var(--green-bright),var(--green));color:#0A1400;box-shadow:0 8px 22px -10px rgba(118,185,0,.9)}
+  .engine-tab.is-active .engine-tab-tag{color:rgba(10,20,0,.66)}
+  .engine-tab:not(.is-active):hover{color:var(--text);background:rgba(255,255,255,.04)}
+  .engine-note{margin:0 0 14px;padding:14px 16px;border-radius:12px;background:rgba(255,226,75,.10);border:1px solid rgba(255,196,0,.45);color:var(--text-1);font-size:15px;line-height:1.6;text-align:center}
+  .engine-note[hidden]{display:none}
+  .engine-hint{font-size:16.5px;line-height:1.5;padding:13px 18px;margin:0 0 12px}
+  .engine-note .engine-note-link,
+  .engine-note .engine-note-link b,
+  .engine-error .engine-note-link,
+  .engine-error .engine-note-link b{color:#2AABEE;text-decoration:underline;text-underline-offset:2px;font-weight:700;cursor:pointer}
+  .engine-note .engine-note-link:hover,
+  .engine-note .engine-note-link:hover b,
+  .engine-error .engine-note-link:hover,
+  .engine-error .engine-note-link:hover b{color:#5BC2F0}
+  .engine-note b{color:var(--text)}
+  .engine-error{margin:0 0 14px;padding:14px 16px;border-radius:12px;background:rgba(255,92,92,.10);border:1px solid rgba(255,92,92,.45);color:var(--text-1);font-size:15px;line-height:1.6;text-align:center}
+  .engine-error b{color:var(--text)}
+  .engine-note--red,
+  .engine-note--red b,
+  .engine-note--red .engine-note-link,
+  .engine-note--red .engine-note-link b{color:var(--text)}
+  .engine-note--red{background:rgba(229,72,77,.10);border-color:rgba(229,72,77,.45)}
+  .engine-note--red .engine-note-hl{color:#FFD24B}
+  @media(max-width:420px){.engine-tab{padding:11px 18px;font-size:16px}.engine-tab-tag{font-size:12px}.engine-note{font-size:14px}.engine-note{padding:12px 13px}}
+
+#rtxTestModal #rtxProgWrap{margin-top:16px}
+#rtxTestModal #rtxProgLabel{color:#8A8A8A;font:500 12.5px/1.4 system-ui,-apple-system,sans-serif;margin-bottom:8px;word-break:break-all}
+#rtxTestModal #rtxProgTrack{height:6px;border-radius:3px;background:#1F1F1F;overflow:hidden}
+#rtxTestModal #rtxProgFill{height:100%;width:0;background:#FE2C55;border-radius:3px;transition:width .25s linear}
+</style></head>
+<body data-page="app">
+
+<nav class="top-nav">
+  <a class="nav-logo" href="/">
+    <img class="nav-logo-glyph" src="assets/logo.jpg" alt="JOHN_QUALITY"/>JOHN_QUALITY
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="/" data-nav="dashboard">Dashboard</a>
+    <a class="nav-link" href="/howto" data-nav="howto">How to Use</a>
+    <a class="nav-link" href="/patcher" data-nav="patcher">Video Optimizer</a>
+    <a class="nav-link" href="/analytics" data-nav="analytics">Analytics</a>
+    <a class="nav-link" href="/tiers" data-nav="tiers">Tiers</a>
+  </div>
+  <div class="nav-right">
+    <span class="nav-ver">v2.0</span>
+    <div class="usage-pill" id="nav-usage"><b>Unlimited</b></div>
+    <div class="nav-user" id="nav-user">
+      <span class="nav-user-name" id="nav-user-name"></span>
+      <span class="nav-user-tier" id="nav-user-tier"></span>
+    </div>
+    <button class="btn-ghost" id="btn-logout" style="display:none">Logout</button>
+  </div>
+  <a class="bn-item" id="bn-login" href="/login" data-login data-discord><span>Login</span></a>
+</nav>
+
+<div class="page">
+  <a class="tg-strip" href="https://t.me/JOHN_QUALITYBot?start=site" target="_blank" rel="noopener">
+    <span class="tg-strip-ico" aria-hidden="true">🎁</span>
+    <span>Get <b>Unlimited uploads</b> by joining our <b>Telegram Channel</b> &middot; Free Premium promos soon</span>
+  </a>
+
+<!-- ══════════════ VIEW: DASHBOARD ══════════════ -->
+  <section class="view" data-view="dashboard">
+
+    <header class="page-hero container">
+      <div class="hero-badge"><i></i>JOHN_QUALITY · Engine v2</div>
+      <h1>Dashboard<span>.</span></h1>
+      <p class="hero-sub">Live platform stats · engine status · quality compare</p>
+      <div class="welcome-row">
+        <span class="welcome-chip" id="welcome-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>WELCOME BACK, <b id="tier-user"></b></span>
+        <span class="welcome-chip mono" id="hero-date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+        <div id="hero-login" style="display:none"></div>
+      </div>
+    </header>
+
+    <main class="container">
+
+      <section class="section">
+        <div class="section-kicker">Platform</div>
+        <div class="section-title">Live Stats</div>
+
+        <div class="kpi-grid">
+          <div class="card reveal" style="--d:.05s">
+            <div class="kpi-top">
+              <div class="kpi-label">Total optimizations</div>
+              <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+            </div>
+            <div class="kpi-value" id="kpi-patches">0</div>
+            <div class="kpi-foot">ALL TIME · ALL USERS</div>
+          </div>
+          <div class="card reveal" style="--d:.12s">
+            <div class="kpi-top">
+              <div class="kpi-label">Users registered</div>
+              <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            </div>
+            <div class="kpi-value" id="kpi-users">0</div>
+            <div class="kpi-foot">DISCORD AND TELEGRAM SYNCED ACCOUNTS</div>
+            <div class="kpi-sub" id="kpi-users-foot"></div>
+          </div>
+          <div class="card reveal" style="--d:.19s">
+            <div class="kpi-top">
+              <div class="kpi-label">Optimizations today</div>
+              <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            </div>
+            <div class="kpi-value" id="kpi-today">0</div>
+            <div class="kpi-foot" id="kpi-today-foot">—</div>
+          </div>
+          <div class="card reveal" style="--d:.26s">
+            <div class="kpi-top">
+              <div class="kpi-label">Engine status</div>
+              <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg></div>
+            </div>
+            <div class="engine-status">
+              <span class="status-dot" id="eng-dot"></span>
+              <span class="status-text" id="eng-text">ONLINE</span>
+            </div>
+            <div class="engine-meta">
+              <span id="eng-version">JOHN_QUALITY ENGINE v2.0</span>
+              <span id="eng-uptime">UPTIME —</span>
+              <span id="eng-last">LAST OPTIMIZATION —</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section reveal" style="--d:.15s">
+        <div class="section-kicker">Account</div>
+        <div class="section-title">Your Tier</div>
+        <div class="tier-banner">
+          <div class="tier-banner-left">
+            <div>
+              <div class="tier-banner-label">Current tier</div>
+              <div class="tier-banner-name" id="tier-name2">—</div>
+            </div>
+            <div class="tier-banner-specs">
+              <span id="tier-mb">Unlimited</span>
+              <span id="tier-res">4K</span>
+              <span id="tier-fps">120 FPS</span>
+              <span>Unlimited uploads</span>
+            </div>
+          </div>
+          <div class="patch-bar unlimited">
+            <div class="pb-label"><span id="pb-text">Unlimited</span><span id="pb-sub">All features unlocked</span></div>
+            <div class="pb-track"><div class="pb-fill" id="pb-fill"></div></div>
+          </div>
+        </div>
+
+        <div class="tier-grid">
+          <div class="tier-card reveal" data-tier="member" style="--d:.1s">
+            <span class="tier-key">MEMBER</span>
+            <div class="tier-name">Free</div>
+            <div class="tier-sub">Join the server</div>
+            <div class="tier-feats">
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg>Topaz preset</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Handbrake preset</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg>Colour correction preset</div>
+            </div>
+            <a class="tier-btn" data-discord-link href="#">Join server</a>
+          </div>
+          <div class="tier-card reveal" data-tier="booster" style="--d:.18s">
+            <span class="tier-key">BOOSTER</span>
+            <div class="tier-name">Booster</div>
+            <div class="tier-sub">Join the server</div>
+            <div class="tier-feats">
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg>Topaz preset</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Handbrake preset</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg>Colour correction preset</div>
+            </div>
+            <a class="tier-btn" data-discord-link href="#">Join server</a>
+          </div>
+          <div class="tier-card featured reveal" data-tier="donor" style="--d:.22s">
+            <span class="rec-chip">Recommended</span>
+            <span class="tier-key">PREMIUM</span>
+            <div class="tier-name">Premium</div>
+            <div class="tier-sub">All features unlocked</div>
+            <div class="tier-feats">
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0 + priority</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b> skip FPS check</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg><b>Topaz preset</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg><b>Handbrake preset</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg><b>Colour correction preset</b></div>
+            </div>
+            <a class="tier-btn" data-discord-link href="#">Join</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section reveal" style="--d:.2s">
+        <div class="cmp-hero">
+          <h2>See the difference</h2>
+          <p>The exact same clip, before and after. Drag the handle to compare.</p>
+        </div>
+        <div class="cmp-stage">
+          <div class="phone-frame">
+            <div class="cmp" id="cmp" style="--pos:50%">
+              <div class="cmp-layer cmp-b">
+                <div class="scene"></div>
+                <video class="cmp-video" id="vid-b" muted loop playsinline preload="auto"></video>
+              </div>
+              <div class="cmp-layer cmp-a">
+                <div class="scene"></div>
+                <video class="cmp-video" id="vid-a" muted loop playsinline preload="auto"></video>
+              </div>
+              <span class="cmp-tag a">Before · 540p 30fps</span>
+              <span class="cmp-tag b">After · 4K 120fps</span>
+              <div class="cmp-line"></div>
+              <div class="cmp-hand" id="cmp-hand" role="slider" tabindex="0"
+                   aria-label="Video quality comparison slider"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 7 4 12 9 17"/><polyline points="15 7 20 12 15 17"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <section class="faq container">
+      <div class="section-kicker">Help</div>
+      <div class="section-title">Frequently Asked Questions</div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">What does the JOHN_QUALITY Optimizer actually do?<span class="faq-caret">▴</span></button>
+        <div class="faq-a">It optimizes the MP4 container and modifies key metadata to help TikTok reduce the amount of compression applied to your video. The original frames and resolution remains completely untouched, preserving the exact quality of your source footage.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">TikTok still compressed my video. Why?<span class="faq-caret">▴</span></button>
+        <div class="faq-a">After optimizing, do not edit the video (TikTok sounds, trimming, filters, etc.), or TikTok may re-encode and compress it. Upload the optimized file exactly as downloaded with visibility set to "Everyone", not "Only Me".<br><br>Check what TikTok actually delivers by pasting your published link into <a href="/analytics" style="color:#58a6ff;text-decoration:underline">Analytics</a> or our <a href="https://t.me/JOHN_QUALITYBot?start=site" target="_blank" rel="noopener" style="color:#58a6ff;text-decoration:underline">Telegram Bot</a></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">What formats work best?<span class="faq-caret">▴</span></button>
+        <div class="faq-a">Use MP4 or MOV with H.264 or H265 (HEVC) encoding. For the best possible quality, export in 1080p or above, at a constant 60 FPS, with a high bitrate to preserve detail.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">What's the recommended bitrate?<span class="faq-caret">▴</span></button>
+        <div class="faq-a">Our personal recommended bitrate is 10-40 Mbps depending on the resolution, to ensure the video plays smooth across all devices around the world. The goal is to get maximum quality with the lowest file size.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">How do I upload TikTok videos with 4K quality?<span class="faq-caret">▴</span></button>
+        <div class="faq-a">Once you edited your video and exported in 4K, then upload the final file to the <a href="/patcher" style="color:#58a6ff;text-decoration:underline">Video Optimizer</a>. JOHN_QUALITY optimizes the MP4/MOV container so TikTok applies no compression to it, preserving your 4K resolution and frame rate, up to 4K 120 FPS.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button">How do I upload TikTok videos without compression?<span class="faq-caret">▴</span></button>
+        <div class="faq-a">TikTok always compresses uploads, but you can keep near-lossless quality with JOHN_QUALITY <a href="/patcher" style="color:#58a6ff;text-decoration:underline">Video Optimizer</a>. Optimize your MP4/MOV with the <a href="/patcher" style="color:#58a6ff;text-decoration:underline">Video Optimizer</a>, enable Upload HD, and post it publicly via TikTok web. DO NOT EDIT the video after optimizing. Upload it as is.</div>
+      </div>
+
+      <p class="faq-support">Any issues or bug? Report to us in Discord. <a class="faq-support-link" data-discord-link href="#">Join here</a></p>
+    </section>
+
+  </section>
+
+  <!-- ══════════════ VIEW: PATCHER ══════════════ -->
+  <section class="view" data-view="patcher">
+
+    <header class="page-hero container">
+      <div class="hero-badge"><i></i>JOHN_QUALITY · Video Optimizer</div>
+      <h1>Video Optimizer<span style="color:var(--text)">.</span></h1>
+      <p class="hero-sub">Run an optimization to bypass TikTok compression. No re-encoding, zero quality loss.</p>
+    </header>
+
+    <main class="container">
+
+      <section class="section">
+        <div class="section-kicker">JOHN_QUALITY ENGINE</div>
+        <div class="section-title">Bypass TikTok Compression</div>
+
+        <div class="patcher-card reveal" style="--d:.1s">
+          <div class="engine-switch" role="tablist" aria-label="Patcher engine">
+            <button class="engine-tab is-active" type="button" role="tab" data-engine="orig" aria-selected="true">
+              <span class="engine-tab-name">JOHN_QUALITY Engine</span>
+              <span class="engine-tab-tag">(Original)</span>
+            </button>
+            <button class="engine-tab" type="button" role="tab" data-engine="ffmpeg" aria-selected="false">
+              <span class="engine-tab-name">JOHN_QUALITY Engine</span>
+              <span class="engine-tab-tag">(with FFMPEG)</span>
+            </button>
+          </div>
+          <div class="engine-note engine-hint" id="engineHint" hidden>
+            Getting <b>30 FPS</b> after uploading to TikTok? Try <b>JOHN_QUALITY Engine (Original)</b> with <b>Auto Post</b> or <b>JOHN_QUALITY Engine (with FFMPEG)</b>.
+          </div>
+          <div class="engine-error" id="engineError" hidden></div>
+
+          <div id="dropZoneWrap">
+            <input type="file" id="fileInput" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" style="display:none"/>
+            <div id="dropZone" class="drop-zone">
+              <div class="drop-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <div class="drop-title">Drop your video here</div>
+              <div class="drop-sub">or click to browse · MP4 / MOV — H.264 or H265 (HEVC), with audio</div>
+              <div class="drop-sub" id="bitrateHint" style="margin-top:8px;font-weight:600;color:var(--text-1)">Our recommended bitrate is 10-30 MBPS</div>
+            </div>
+
+            <div class="limit-bar">
+              <div class="limit-bar-track"><div class="limit-bar-fill" id="limitFill"></div></div>
+              <div class="limit-text" id="limitText">Unlimited</div>
+            </div>
+
+            <div class="scan-view" id="scanView">
+              <div class="sv-item"><div class="sv-lbl">Size</div><div class="sv-val" id="sv-size">—</div></div>
+              <div class="sv-item"><div class="sv-lbl">Resolution</div><div class="sv-val" id="sv-res">—</div></div>
+              <div class="sv-item"><div class="sv-lbl">Duration</div><div class="sv-val" id="sv-dur">—</div></div>
+              <div class="sv-item"><div class="sv-lbl">Health</div><div class="sv-val" id="sv-health" style="color:var(--green)">—</div></div>
+            </div>
+
+            <div class="action-row">
+              <label id="h264Wrap" style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;color:var(--text-2);margin-right:12px;white-space:nowrap;" title="Re-encode H265 (HEVC) files to H.264 via the GPU encoder">
+                <input type="checkbox" id="h264Convert" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;"/>
+                Convert H265 (HEVC) to H.264 <span style="color:#9cd6ff;font-size:14px;font-weight:600">&nbsp;(optional)</span>
+              </label>
+              <button class="btn btn-run" id="runBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Optimize Video</button>
+              <button class="btn btn-clear" id="clearBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear</button>
+            </div>
+
+            <div class="usage-row">
+              <div class="usage-avatar" id="usage-avatar">U</div>
+              <div class="usage-label"><b id="usage-tier-label">—</b> · <span id="usage-count">Unlimited</span> uploads</div>
+            </div>
+          </div>
+
+          <div id="processingView" style="display:none">
+            <div class="proc-progress">
+              <div class="proc-pct" id="progressPct">0%</div>
+              <div class="proc-stage" id="progressStage">Processing…</div>
+              <div class="progress-track" style="margin-top:18px;"><div class="progress-fill" id="progressFill"></div></div>
+              <div class="proc-status" id="procStatus">JOHN_QUALITY Engine</div>
+              <div class="proc-log" id="procLog"></div>
+              <div class="proc-actions" id="rtxActions"><button class="btn" id="rtxTestPost" style="display:none;background:#FE2C55;color:#fff;border:0;cursor:pointer">
+                  <span class="rtx-line1"><img class="rtx-ttlogo-sm" src="/assets/tiktok-logo2.jpg" alt=""><span class="rtx-ap">Auto Post</span></span>
+                  <span class="rtx-sub">(Highly Recommended)</span>
+                </button>
+                <div id="rtxTestModal" style="display:none;background:#000000;border:1px solid #1F1F1F;border-radius:12px;padding:18px;text-align:left"><div id="rtxKicker" class="rtx-kicker">Render complete</div>
+    <div class="rtx-h1" id="rtxTitle">Your video is ready</div>
+    <div class="rtx-p" id="rtxSub" style="margin:7px 0 18px">Choose what happens next:</div>
+
+    <div id="rtxChoice" style="display:none"></div>
+
+    <div id="rtxKey" style="display:none">
+      <label class="rtx-lbl">PostPeer API key</label>
+      <input id="rtxApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your access key">
+      <button id="rtxKeyGet" class="rtxs" style="margin-bottom:11px">Get your API key here &#8599;</button>
+      <button id="rtxKeyGo" class="rtxp">Connect PostPeer</button>
+    </div>
+
+    <div id="rtxPanel" style="display:none">
+      <div id="rtxAcctBox">
+        <button id="rtxConnect" class="rtxw"><img class="rtx-ttlogo-sm" src="/assets/tiktok-logo2.jpg" alt="">Add TikTok account &#8599;</button>
+        <div id="rtxKeyMsg" class="rtx-ok">API key connected. Add a TikTok account to continue.</div>
+        <button id="rtxLogout2" class="rtxs" style="margin-top:16px">Change key / Log out</button>
+      </div>
+
+      <div id="rtxPostBox" style="display:none">
+        <div class="rtx-userrow">
+          <img class="rtx-ttlogo" id="rtxAvatar" src="/assets/tiktok-logo2.jpg" alt="">
+          <div id="rtxUser">@&hellip;</div>
+        </div>
+        <button id="rtxLogout" class="rtxs" style="margin-bottom:22px">Change key / Log out</button>
+        <label class="rtx-lbl">Caption</label>
+        <textarea id="rtxCaption" maxlength="2200" placeholder="Write a caption&hellip;  #hashtags @mentions"></textarea>
+        <div id="rtxCount" class="rtx-count">0 / 2200</div>
+                <button id="rtxPostNow" class="rtxp">Post to TikTok</button>
+        <div id="rtxProgWrap" style="display:none">
+          <div id="rtxProgLabel">Uploading to TikTok&hellip;</div>
+          <div id="rtxProgTrack"><div id="rtxProgFill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <span id="rtxTestClose" style="display:none"></span>
+    <button id="rtxTestDl" style="display:none"></button>
+    <div id="rtxTestMsg" class="rtx-ok"></div>
+              </div>
+                <button class="btn btn-dl" id="dlBtn" style="display:none" disabled><svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Optimized Video</button>
+                <button class="btn btn-again" id="againBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Optimize Another</button>
+              </div>
+              <style>
+#rtxTestModal{text-align:left}
+#rtxTestModal .rtx-kicker{color:#8A8A8A;font:800 11px/1.6 system-ui,-apple-system,sans-serif;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+#rtxTestModal .rtx-h1{font:800 21px/1.25 system-ui,-apple-system,sans-serif;color:#FFFFFF;letter-spacing:-.01em}
+#rtxTestModal .rtx-p{color:#8A8A8A;font-size:13.5px;line-height:1.5}
+#rtxTestModal .rtx-lbl{display:block;font:700 13.5px system-ui,-apple-system,sans-serif;color:#EDEDED;margin-bottom:8px}
+#rtxTestModal .rtx-muted{color:#7A7A7A;font-size:12.5px}
+#rtxTestModal .rtx-note{color:#7A7A7A;font-size:12.5px;margin:10px 0 18px}
+#rtxTestModal .rtx-ok{color:#8A8A8A;font-size:12.5px;margin-top:14px;line-height:1.5}
+
+#rtxTestModal .rtxp{width:100%;padding:15px;border:0;border-radius:8px;background:#FE2C55;color:#FFFFFF;font:700 15.5px system-ui,-apple-system,sans-serif;cursor:pointer;transition:background .15s}
+#rtxTestModal .rtxp:hover{background:#E82A4E}
+#rtxTestModal .rtxw{width:100%;padding:15px;border:0;border-radius:8px;background:#FFFFFF;color:#0A0A0A;font:700 15.5px system-ui,-apple-system,sans-serif;cursor:pointer;transition:background .15s}
+#rtxTestModal .rtxw:hover{background:#E8E8E8}
+#rtxTestModal .rtxs{width:100%;padding:14px;border-radius:8px;background:transparent;border:1px solid #2F2F2F;color:#EDEDED;font:600 15px system-ui,-apple-system,sans-serif;cursor:pointer;transition:background .15s,border-color .15s}
+#rtxTestModal .rtxs:hover{background:#161616;border-color:#3F3F3F}
+
+#rtxTestModal .rtx-ttlogo{width:40px;height:40px;border-radius:10px;object-fit:cover;flex:0 0 auto;display:block}
+#rtxTestModal .rtx-ttlogo-sm{width:18px;height:18px;border-radius:5px;object-fit:cover;margin-right:9px;vertical-align:-4px}
+#rtxTestModal .rtx-userrow{display:flex;align-items:center;gap:12px;background:#121212;border:1px solid #1F1F1F;border-radius:12px;padding:13px;margin-bottom:14px}
+#rtxTestModal #rtxUser{font:700 15.5px system-ui,-apple-system,sans-serif;color:#FFFFFF}
+#rtxTestModal #rtxApiKey{width:100%;box-sizing:border-box;background:#121212;border:1px solid #2F2F2F;border-radius:8px;color:#EDEDED;padding:15px;margin-bottom:16px;font:15px system-ui,-apple-system,sans-serif;outline:none;transition:border-color .15s}
+#rtxTestModal #rtxApiKey:focus{border-color:#25F4EE}
+#rtxTestModal #rtxCaption{width:100%;height:118px;box-sizing:border-box;background:#121212;border:1px solid #2F2F2F;border-radius:8px;color:#EDEDED;padding:13px;font:15px/1.45 system-ui,-apple-system,sans-serif;resize:vertical;outline:none;transition:border-color .15s}
+#rtxProgFill.rtx-progress-live{position:relative;overflow:hidden;transition:width .24s linear}
+#rtxProgFill.rtx-progress-live::after{content:"";position:absolute;inset:0;width:42%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.34),transparent);transform:translateX(-140%);animation:rtx-progress-shimmer 1.35s linear infinite}
+@keyframes rtx-progress-shimmer{to{transform:translateX(340%)}}
+#rtxTestModal #rtxCaption:focus{border-color:#25F4EE}
+#rtxTestModal .rtx-count{text-align:right;color:#7A7A7A;font-size:12px;margin:7px 2px 18px}
+
+#rtxActions{display:flex;flex-direction:column;gap:12px;align-items:center}
+#rtxActions>button{width:100%;max-width:360px;height:68px;min-height:68px;margin:0;
+  display:flex;align-items:center;justify-content:center;border-radius:8px;box-sizing:border-box;
+  padding:0 18px;overflow:hidden}
+#rtxActions>#rtxTestModal{margin:0;width:100%;max-width:360px}
+#rtxTestPost{flex-direction:column;gap:5px}
+#rtxTestPost .rtx-line1{display:flex;align-items:center;justify-content:center}
+#rtxTestPost .rtx-ttlogo-sm{width:26px;height:26px;border-radius:6px;margin-right:10px;flex:0 0 auto}
+#rtxTestPost .rtx-ap{font:800 19px/1 system-ui,-apple-system,sans-serif;letter-spacing:.02em;white-space:nowrap}
+#rtxTestPost .rtx-sub{font:500 14px/1.3 system-ui,-apple-system,sans-serif;opacity:.92;text-align:center;display:block;width:100%;max-width:100%;white-space:normal;overflow-wrap:break-word}
+@media (max-width:640px){
+  #rtxActions>button,#rtxActions>#rtxTestModal{max-width:100%}
+  #rtxActions>#rtxTestPost{padding-left:10px;padding-right:10px}
+  #rtxTestPost .rtx-sub{font-size:13px;letter-spacing:.02em;line-height:1.2}
+  #rtxTestModal .rtx-h1{font-size:18px}
+}
+@media (max-width:400px){
+  #rtxTestPost .rtx-sub{font-size:12px}
+  #rtxTestModal .rtx-h1{font-size:16px}
+}
+</style>
+              
+              <div style="margin:16px 0 0;padding:16px 18px;border-radius:10px;border:1px solid var(--green);background:rgba(255,255,255,.03);color:var(--text-1);font-size:18px;line-height:1.65;text-align:left"><div style="margin-bottom:10px;text-align:center"><b style="text-decoration:underline">IMPORTANT NOTES</b></div><div style="padding-left:16px;text-indent:-16px;margin-bottom:7px">&bull;&nbsp;&nbsp;Showing <b>&ldquo;0 seconds&rdquo;</b> in video after optimizing is normal. Ignore it. It plays smoothly once uploaded on TikTok.</div><div style="padding-left:16px;text-indent:-16px">&bull;&nbsp;&nbsp;<b>IOS Users:</b> To keep your video at 60/120 FPS, make sure to upload it above from Files app (not from phone gallery).</div></div>
+              <div style="margin-top:16px;">
+                <button class="btn btn-clear" id="cancelBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancel</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+  </section>
+
+  <!-- ══════════════ VIEW: ANALYTICS ══════════════ -->
+  <section class="view" data-view="analytics">
+
+    <header class="page-hero container">
+      <div class="hero-badge"><i></i>JOHN_QUALITY · Analytics</div>
+      <h1>TikTok Analyzer<span>.</span></h1>
+      <p class="hero-sub">Inspect any TikTok video's metadata, engagement stats, and technical specs.</p>
+    </header>
+
+    <div class="analytics-section">
+      <div class="container">
+
+        <div class="patcher-card reveal" style="--d:.1s">
+          <div class="tt-engine-label">
+            <div class="tt-engine-dot"></div>
+            <span class="tt-engine-name">TikTok Analyzer</span>
+            <span class="tt-engine-ver">v2.0</span>
+          </div>
+
+          <p style="font-size:13px;color:var(--text-3);margin:0 0 14px">
+            Paste a TikTok video link to check its quality, FPS, region and shadow ban.
+          </p>
+
+          <div class="tt-input-row">
+            <div class="tt-input-wrap">
+              <input type="url" id="ttUrlInput" class="tt-input"
+                placeholder="https://www.tiktok.com/@user/video/…"
+                autocomplete="off">
+            </div>
+            <button class="btn-tt-analyze" id="ttAnalyzeBtn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Analyze
+            </button>
+          </div>
+
+          <div class="tt-loading" id="ttLoading">
+            <div class="tt-spinner"></div>
+            <div class="tt-loading-text">Fetching video data…</div>
+          </div>
+
+          <div class="tt-error" id="ttError"></div>
+
+          <div class="tt-result" id="ttResult">
+
+            <div class="an-note" id="ttDemoNote" style="display:none"><i></i></div>
+
+            <div class="tt-profile-row">
+              <img id="ttAvatar" class="tt-thumb" src="" alt="">
+              <div class="tt-author-info">
+                <div class="tt-author-name" id="ttAuthorName">—</div>
+                <div class="tt-author-handle" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <span id="ttHandle">—</span>
+                  <span id="ttVerified" class="tt-verified" style="display:none;">✓ Verified</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;">
+                  <span id="ttAccountBadge" class="tt-account-badge public">PUBLIC</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="tt-meta-row">
+              <span class="tt-meta-item">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span id="ttDuration">—</span>
+              </span>
+              <span class="tt-meta-item">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span id="ttUploadedAt">—</span>
+              </span>
+            </div>
+
+            <div class="tt-title-box">
+              <div class="tt-title-text" id="ttTitle">—</div>
+              <div class="tt-hashtags" id="ttHashtags"></div>
+            </div>
+
+            <div class="scan-view" id="ttStats" style="margin-bottom:16px;">
+              <div class="sv-item"><div class="sv-lbl">Views</div><div class="sv-val" id="st-views">—</div></div>
+              <div class="sv-item"><div class="sv-lbl">Likes</div><div class="sv-val" id="st-likes">—</div></div>
+              <div class="sv-item"><div class="sv-lbl">Comments</div><div class="sv-val" id="st-comments">—</div></div>
+              <div class="sv-item"><div class="sv-lbl">Shares</div><div class="sv-val" id="st-shares">—</div></div>
+            </div>
+
+            <div class="tt-tech-row">
+              <div class="tt-tech"><div class="tt-tech-lbl">Resolution</div><div class="tt-tech-val" id="tech-res">—</div></div>
+              <div class="tt-tech"><div class="tt-tech-lbl">FPS</div><div class="tt-tech-val" id="tech-fps">—</div></div>
+              <div class="tt-tech"><div class="tt-tech-lbl">Engine</div><div class="tt-tech-val" id="tech-engine">—</div></div>
+              <div class="tt-tech"><div class="tt-tech-lbl">File Size</div><div class="tt-tech-val" id="tech-size">—</div></div>
+              <div class="tt-tech"><div class="tt-tech-lbl">Codec</div><div class="tt-tech-val" id="ttCodec">—</div></div>
+              <div class="tt-tech"><div class="tt-tech-lbl">Region</div><div class="tt-tech-val" id="ttRegion">—</div></div>
+              <div class="tt-tech"><div class="tt-tech-lbl">Shadow Ban</div><div class="tt-tech-val" id="ttShadowBan">—</div></div>
+              <div class="tt-tech">
+                <div class="tt-tech-lbl">Status</div>
+                <div class="tt-tech-val" id="tech-status" style="color:var(--green);">—</div>
+              </div>
+            </div>
+
+            <a id="ttVideoBtn" class="tt-video-btn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download HD Video
+            </a>
+
+          </div>
+        </div>
+
+        <div class="patcher-card reveal" style="--d:.2s;margin-top:22px">
+          <div class="tt-engine-label">
+            <div class="tt-engine-dot"></div>
+            <span class="tt-engine-name">Best Upload Times</span>
+            <span class="tt-engine-ver">v2.0</span>
+          </div>
+
+          <p style="font-size:13px;color:var(--text-3);margin:0 0 14px">
+            Enter your TikTok username to see when your videos perform best.
+          </p>
+
+          <div class="tt-input-row">
+            <div class="tt-input-wrap">
+              <input type="text" id="btUsername" class="tt-input" placeholder="@yourusername" autocomplete="off">
+            </div>
+            <button class="btn-tt-analyze" id="btCheckBtn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Check
+            </button>
+          </div>
+
+          <div class="tt-loading" id="btLoading">
+            <div class="tt-spinner"></div>
+            <div class="tt-loading-text">Analysing recent posts&hellip;</div>
+          </div>
+
+          <div class="tt-error" id="btError"></div>
+
+          <div id="btResult" style="display:none"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════ VIEW: TIERS ══════════════ -->
+  <section class="view" data-view="tiers">
+
+    <header class="page-hero container">
+      <div class="hero-badge"><i></i>JOHN_QUALITY · Engine v2</div>
+      <h1>Choose Your Tier<span>.</span></h1>
+      <p class="hero-sub">All tiers use the same engine. Everything is Unlimited. Tier syncs automatically from your Discord roles.</p>
+    </header>
+
+    <main class="container">
+
+      <section class="section">
+        <div class="tier-grid reveal" style="--d:.08s">
+          <div class="tier-card" data-tier="member">
+            <span class="tier-key">MEMBER</span>
+            <div class="tier-name">Free</div>
+            <div class="tier-sub">Join the server</div>
+            <div class="tier-feats">
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg>Topaz preset</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Handbrake preset</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg>Colour correction preset</div>
+            </div>
+            <a class="tier-btn" data-discord-link href="#">Join server</a>
+          </div>
+          <div class="tier-card" data-tier="booster">
+            <span class="tier-key">BOOSTER</span>
+            <div class="tier-name">Booster</div>
+            <div class="tier-sub">Join the server</div>
+            <div class="tier-feats">
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg>Topaz preset</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Handbrake preset</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg>Colour correction preset</div>
+            </div>
+            <a class="tier-btn" data-discord-link href="#">Join server</a>
+          </div>
+          <div class="tier-card featured" data-tier="donor">
+            <span class="rec-chip">Best value</span>
+            <span class="tier-key">PREMIUM</span>
+            <div class="tier-name">Premium</div>
+            <div class="tier-sub">All features unlocked</div>
+            <div class="tier-feats">
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0 + priority</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b> skip FPS check</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg><b>Topaz preset</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg><b>Handbrake preset</b></div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg><b>Colour correction preset</b></div>
+            </div>
+            <a class="tier-btn" data-discord-link href="#">Join</a>
+          </div>
+        </div>
+
+        <div style="text-align:center;">
+          <button class="tier-cta" id="tier-cta" data-login data-discord>Login</button>
+        </div>
+        <p class="tier-note">Everything is Unlimited for all users. No license keys needed.</p>
+      </section>
+
+      <section class="section reveal" style="--d:.15s">
+        <div class="section-kicker">Compare</div>
+        <div class="section-title">Full Comparison</div>
+        <div class="table-scroll" style="margin-top:18px;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th class="center tier-th">Free</th>
+                <th class="center tier-th">Booster</th>
+                <th class="center tier-th">Premium</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>File limit</td><td class="center"><b>Unlimited</b></td><td class="center"><b>Unlimited</b></td><td class="center yes">Unlimited</td></tr>
+              <tr><td>Uploads</td><td class="center"><b>Unlimited</b></td><td class="center"><b>Unlimited</b></td><td class="center yes">Unlimited</td></tr>
+              <tr><td>Max resolution</td><td class="center">4K</td><td class="center"><b>4K</b></td><td class="center"><b>4K</b></td></tr>
+              <tr><td>Max FPS</td><td class="center">120</td><td class="center"><b>120</b></td><td class="center"><b>120</b></td></tr>
+              <tr><td>Engine access</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td></tr>
+              <tr><td>Dashboard</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td></tr>
+              <tr><td>Analytics tools</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td></tr>
+              <tr><td>Priority support</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
+              <tr><td>Fast Processing</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
+<tr><td>Topaz preset</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
+              <tr><td>Handbrake preset</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
+              <tr><td>Colour correction preset</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
+              <tr class="compare-cta">
+                <td></td>
+                <td class="center"><a class="tier-btn" data-discord-link href="#">Join server</a></td>
+                <td class="center"><a class="tier-btn" data-discord-link href="#">Join server</a></td>
+                <td class="center"><a class="tier-btn" data-discord-link href="#">Join</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+  </section>
+
+  <!-- Support CTA — right above the socials -->
+  <section class="socials-section">
+    <h2 class="socials-title">Any issues? Contact us</h2>
+    <div class="socials-row" style="display:flex;justify-content:center;">
+      <a class="social-btn" href="https://discord.gg/ApzyyrNupd" target="_blank" rel="noopener" aria-label="Open a Support Ticket" style="width:auto;min-width:260px;background:#5865F2;border-color:#5865F2;"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>Open a Support Ticket</a>
+    </div>
+  </section>
+
+  <!-- Socials -->
+  <section class="socials-section">
+    <h2 class="socials-title">Follow JOHN_QUALITY</h2>
+    <div class="socials-row">
+      <a class="social-btn" href="https://www.tiktok.com/@john_quality" target="_blank" rel="noopener" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>TikTok</a>
+      <a class="social-btn" href="https://www.youtube.com/@JOHN_QUALITY" target="_blank" rel="noopener" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="#FF0000" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>YouTube</a>
+      <a class="social-btn" href="https://discord.gg/ApzyyrNupd" target="_blank" rel="noopener" aria-label="Discord"><svg viewBox="0 0 24 24" fill="#5865F2" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>Discord</a>
+      <a class="social-btn" href="https://t.me/JOHN_QUALITYYT" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" fill="#26A5E4" aria-hidden="true"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>Telegram</a>
+      <a class="social-btn" href="https://instagram.com/john_qualityyt" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="#E4405F" aria-hidden="true"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.36 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg>Instagram</a>
+      <a class="social-btn" href="https://whatsapp.com/channel/0029VbBxGFU7tkjF41GNon0u" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="#25D366" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>WhatsApp</a>
+      <a class="social-btn" href="https://linktr.ee/john_quality" target="_blank" rel="noopener" aria-label="Linktree"><svg viewBox="0 0 24 24" fill="#43E660" aria-hidden="true"><path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm.03 3.45l1.07 1.09-2.25 2.2 2.25 2.2-1.07 1.09-3.31-3.29 3.31-3.29zm2.66 0l3.31 3.29-3.31 3.29-1.07-1.09 2.25-2.2-2.25-2.2 1.07-1.09zM12 6.53l1.56 1.56L12 9.66l-1.56-1.57L12 6.53zm-2.86.55l-2.25 2.2-1.07-1.09 3.31-3.29 1.07 1.09-1.06 1.09zm5.72 0l-1.07-1.09 1.06-1.09 1.07 1.09-1.06 1.09zM6.75 8.7l2.5 2.44-2.5 2.44-2.5-2.44 2.5-2.44zm10.5 0l2.5 2.44-2.5 2.44-2.5-2.44 2.5-2.44zM12 11.16l1.53 1.5-1.53 1.5-1.53-1.5 1.53-1.5zM4.5 12.66l3.5 3.41v3.47H4.5v-6.88zm15 0v6.88h-3.5v-3.47l3.5-3.41zM9.5 16.07l2.5 2.44 2.5-2.44v2.5H9.5v-2.5z"/></svg>Linktree</a>
+    </div>
+  </section>
+
+  <!-- ══════════════ VIEW: ADMIN ══════════════ -->
+  <section class="view" data-view="admin">
+
+    <header class="page-hero container">
+      <div class="hero-badge"><i></i>JOHN_QUALITY · Control</div>
+      <h1>Admin<span>.</span></h1>
+      <p class="hero-sub">Manage users and tiers — protected by the admin secret.</p>
+    </header>
+
+    <main class="container">
+
+      <form class="admin-box" id="admin-login-form" style="display:none">
+        <h2>Admin Access</h2>
+        <p>Enter the admin secret from your server config to continue.</p>
+        <input class="input-field" type="password" id="admin-secret" placeholder="Admin secret" autocomplete="current-password" style="width:100%;"/>
+        <button class="btn btn-run" type="submit" style="width:100%;margin-top:12px;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Unlock</button>
+        <div class="admin-error" id="admin-error"></div>
+      </form>
+
+      <section id="admin-panel" style="display:none">
+        <div class="section">
+          <div class="section-kicker">Users</div>
+          <div class="section-title">Registered Accounts</div>
+          <div class="admin-toolbar">
+            <span class="count" id="admin-count">—</span>
+            <div style="display:flex;gap:10px;">
+              <button class="btn btn-clear" id="admin-refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh</button>
+              <button class="btn btn-clear" id="admin-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Logout</button>
+            </div>
+          </div>
+          <div class="admin-table-wrap reveal" style="--d:.1s">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Optimizations</th>
+                  <th>Tier override</th>
+                  <th>Joined</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="admin-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </section>
+
+  <!-- ══════════════ VIEW: LOGIN ══════════════ -->
+  <section class="view" data-view="login">
+    <div class="login-card">
+      <h1 id="login-title">Redirecting…</h1>
+      <p id="login-msg">Taking you to login.</p>
+      <a class="btn" id="login-go" href="/api/discord?action=login">Login</a>
+    </div>
+  </section>
+
+</div>
+
+<footer class="site-footer">
+  <div class="footer-cols">
+    <div class="footer-brand">
+      <img class="footer-brand-logo" src="assets/logo.jpg" alt="JOHN_QUALITY"/>
+      <b class="footer-brand-name">JOHN_QUALITY</b>
+      <p>Full quality TikTok uploads</p>
+      <p>Video Optimizer</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="/patcher">Video Optimizer</a>
+      <a href="/analytics">Video check</a>
+      <a href="/tiers">Tiers</a>
+    </div>
+    <div class="footer-col">
+      <h4>Guides</h4>
+      <a href="/howto">How to use</a>
+      <a href="https://youtu.be/k3P_rjgDGEA?is=OKPn3vKb9RFc5rCx" target="_blank" rel="noopener">Upload method</a>
+      <a href="https://www.youtube.com/@JOHN_QUALITY" target="_blank" rel="noopener">Why TikTok compresses video</a>
+    </div>
+    <div class="footer-cols-2">
+      <div class="footer-col">
+        <h4>Community</h4>
+        <a data-discord-link href="#">Discord</a>
+        <a href="https://t.me/JOHN_QUALITYYT" target="_blank" rel="noopener">Telegram</a>
+        <a data-discord-link href="#">Support us</a>
+      </div>
+      <div class="footer-col">
+        <h4>Socials</h4>
+        <a href="https://www.youtube.com/@JOHN_QUALITY" target="_blank" rel="noopener">YouTube</a>
+        <a href="https://www.tiktok.com/@john_quality" target="_blank" rel="noopener">TikTok</a>
+        <a href="https://instagram.com/john_qualityyt" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://whatsapp.com/channel/0029VbBxGFU7tkjF41GNon0u" target="_blank" rel="noopener">WhatsApp</a>
+        <a href="https://linktr.ee/john_quality" target="_blank" rel="noopener">Linktree</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-seo">
+    <h4>Popular searches</h4>
+    <div class="footer-seo-tags">
+      <a href="/patcher">TikTok no compression upload</a>
+      <a href="/patcher">TikTok quality upload</a>
+      <a href="/patcher">TikTok no compression</a>
+      <a href="/tiers">TikTok 120 FPS method</a>
+      <a href="/tiers">TikTok upload 120 FPS</a>
+      <a href="/">JOHN_QUALITY TikTok method</a>
+      <a href="/">How to upload in TikTok with 4K quality</a>
+      <a href="/">How to upload in TikTok without compression</a>
+      <a href="/">Editing news TikTok method</a>
+      <a href="/">Editing news quality upload</a>
+      <a href="/">JOHN_QUALITY Method</a>
+    </div>
+  </div>
+  <div class="footer-bottom">Not affiliated with TikTok. Use responsibly. · v2.0</div>
+</footer>
+
+<script src="site-config.js"></script>
+<script>window.__VIEW__ = "patcher";</script>
+<script type="module" src="assets/rtx-local-convert.js?v=36"></script>
+<script src="assets/shared.js?v=167"></script>
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <a class="bn-item" href="/" data-nav="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Home</span></a>
+  <a class="bn-item" href="/howto" data-nav="howto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span>How to use</span></a>
+  <a class="bn-item" href="/patcher" data-nav="patcher"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Video optimizer</span></a>
+  <a class="bn-item" href="/analytics" data-nav="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7" rx="1"/><rect x="12" y="6" width="3" height="11" rx="1"/><rect x="17" y="13" width="3" height="4" rx="1"/></svg><span>Analytics</span></a>
+  <a class="bn-item" href="/tiers" data-nav="tiers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span>Tiers</span></a>
+  <a class="bn-item" id="bn-logout" href="#" aria-label="Logout" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Logout</span></a>
+</nav>
+
+<script>
+  (function () {
+    var inv = (window.RTX && window.RTX.DISCORD_INVITE) || "#";
+    var prem = (window.RTX && window.RTX.DISCORD_PREMIUM_CHANNEL) || "https://discord.com/channels/1396835411510300780/1538322900560511066";
+    document.querySelectorAll("[data-discord-link]").forEach(function (a) { a.href = a.textContent.trim().toLowerCase() === "donate" ? prem : inv; a.target = "_blank"; });
+    document.querySelectorAll(".faq-q").forEach(function (btn) {
+      btn.addEventListener("click", function () { btn.parentElement.classList.toggle("open"); });
+    });
+  })();
+</script>
+
+<script src="/assets/chat.js?v=9" defer></script>
+
+<script>
+(function () {
+  var KEY = "john_quality_engine";
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".engine-tab"));
+  if (!tabs.length) return;
+  function apply(engine) {
+    tabs.forEach(function (t) {
+      var on = t.getAttribute("data-engine") === engine;
+      t.classList.toggle("is-active", on);
+      t.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    var hint = document.getElementById("engineHint");
+    if (hint) hint.hidden = engine !== "orig";
+  }
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () {
+      var engine = t.getAttribute("data-engine") === "ffmpeg" ? "ffmpeg" : "orig";
+      try { localStorage.setItem(KEY, engine); } catch (e) {}
+      apply(engine);
+    });
+  });
+  var saved = "orig";
+  try { saved = localStorage.getItem(KEY) === "ffmpeg" ? "ffmpeg" : "orig"; } catch (e) {}
+  apply(saved);
+})();
+</script>
+
+<script>
+(function () {
+  var TEST_KEY = "d27dc309743b8f58505e102f73150ac1";
+  var PAGE = location.origin + location.pathname;
+  var blob = null, blobUrl = "", outName = "john-quality-optimized.mp4", popped = false, bus = false;
+  var jobId = "", stageId = "";
+  var modal = document.getElementById("rtxTestModal");
+  var msg = document.getElementById("rtxTestMsg");
+  function show() { modal.style.display = "flex"; }
+  function hide() { modal.style.display = "none"; }
+  document.getElementById("rtxTestClose").onclick = hide;
+
+  var realCreate = URL.createObjectURL;
+  URL.createObjectURL = function (o) {
+    try { if (o && typeof o.size === "number" && o.size > 1000) { blob = o; popped = false; } } catch (e) {}
+    return realCreate.apply(this, arguments);
+  };
+  var realOpen = XMLHttpRequest.prototype.open, realSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function (m, u) { this.__u = u; this.__m = m; return realOpen.apply(this, arguments); };
+  XMLHttpRequest.prototype.send = function () {
+    var x = this;
+    try {
+      x.addEventListener("readystatechange", function () {
+        try {
+          if (x.readyState >= 2 && /patch-rtx/.test(x.__u || "")) {
+            var jh = x.getResponseHeader("X-Job-Id");
+            if (jh) {
+              jobId = jh;
+              window.__rtxJob = { id: jh };
+              try { sessionStorage.setItem("rtx_job", jh); } catch (e) {}
+            }
+          }
+        } catch (e) {}
+      });
+    } catch (e) {}
+    return realSend.apply(this, arguments);
+  };
+  function jobFromUrl(u) { var m = /\/api\/patch-rtx\/job\/([0-9a-f]{8,32})/i.exec(u || ""); return m ? m[1] : ""; }
+
+  var realClick = HTMLAnchorElement.prototype.click;
+
+  function popup(why) {
+    if (popped) return;
+    popped = true;
+    document.getElementById("rtxChoice").style.display = "block";
+    document.getElementById("rtxPanel").style.display = "none";
+    document.getElementById("rtxTitle").textContent = "Your video is ready";
+    document.getElementById("rtxSub").textContent = "Choose what happens next:";
+    msg.textContent = "";
+    show();
+  }
+
+  function panel(username) {
+    document.getElementById("rtxChoice").style.display = "none";
+    document.getElementById("rtxPanel").style.display = "block";
+    document.getElementById("rtxTitle").textContent = "Post directly to TikTok";
+    document.getElementById("rtxSub").textContent = "Add a caption, then post.";
+    document.getElementById("rtxUser").textContent = username || "connected";
+    msg.textContent = "";
+    show();
+  }
+
+  var coverMs = -1, stageUrl = "";
+  var cap = document.getElementById("rtxCaption");
+  cap.addEventListener("input", function () { document.getElementById("rtxCount").textContent = cap.value.length + " / 2200"; });
+
+  document.getElementById("rtxTestDl").onclick = function () {
+    var url = blobUrl || (blob ? realCreate(blob) : "");
+    if (!url) { msg.textContent = "no file captured"; return; }
+    var a = document.createElement("a");
+    a.href = url; a.download = outName;
+    document.body.appendChild(a); realClick.call(a); a.remove();
+    msg.textContent = "downloading " + outName + "…";
+    setTimeout(hide, 900);
+  };
+
+  async function poll(id) {
+    for (var i = 0; i < 15; i++) {
+      await new Promise(function (r) { setTimeout(r, 6000); });
+      try {
+        var s = await (await fetch("/api/tiktoktest/status/" + id + "?k=" + TEST_KEY)).json();
+        var p = (s.platforms || [{}])[0];
+        msg.textContent = "TikTok: " + (p.status || "?") +
+          (p.platformPostUrl ? "\n" + p.platformPostUrl : "") +
+          (p.errorMessage ? "\n" + p.errorMessage : "");
+        if (p.status === "published" || p.status === "failed") return;
+      } catch (e) { msg.textContent = "status error: " + e.message; }
+    }
+  }
+
+  document.getElementById("rtxTestPost").onclick = async function () {
+    if (bus) return;
+    bus = true;
+    try {
+      if (!jobId && blobUrl) jobId = jobFromUrl(blobUrl);
+      if (!jobId && window.__rtxJob && window.__rtxJob.id) jobId = window.__rtxJob.id;
+      msg.textContent = "Preparing…";
+      var j = await (await fetch("/api/tiktoktest/prepare?k=" + TEST_KEY + "&back=" + encodeURIComponent(PAGE),
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId: jobId }) })).json();
+      if (!j.ok) { msg.textContent = "Failed: " + (j.error || "unknown"); bus = false; return; }
+      stageId = j.stageId;
+      if (j.stageUrl) stageUrl = j.stageUrl;
+      try { localStorage.setItem("rtxStage", JSON.stringify({ stage: stageId, url: stageUrl, at: Date.now() })); } catch (e) {}
+      if (j.checkFailed) {
+        msg.textContent = "Could not reach TikTok to check the connection — try again in a moment.";
+        bus = false; return;
+      }
+      if (!j.connected) {
+        msg.textContent = "Opening TikTok to allow access (one time)…";
+        try { sessionStorage.setItem("rtxAllowReturn", "1"); } catch (e) {}
+        location.href = j.connectUrl;
+        return;
+      }
+      panel(j.username);
+      bus = false;
+    } catch (e) { msg.textContent = "Error: " + (e && e.message); bus = false; }
+  };
+
+  document.getElementById("rtxPostNow").onclick = async function () {
+    if (bus) return;
+    bus = true;
+    try {
+      msg.textContent = "Posting to TikTok…";
+      var r = await fetch("/api/tiktoktest/publish?k=" + TEST_KEY + "&back=" + encodeURIComponent(PAGE),
+        { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stageId: stageId , caption: cap.value }) });
+      var j = await r.json();
+      if (j.needConnect) { msg.textContent = "TikTok is not connected — tap Auto post again."; bus = false; return; }
+      if (!j.ok) { msg.textContent = "Failed: " + (j.error || "unknown"); bus = false; return; }
+      try { localStorage.removeItem("rtxStage"); } catch (e) {}
+      msg.textContent = "TikTok is processing it (30-60s)…";
+      await poll(j.postId);
+      bus = false;
+    } catch (e) { msg.textContent = "Error: " + (e && e.message); bus = false; }
+  };
+
+  (async function () {
+    var back = "0";
+    try { back = sessionStorage.getItem("rtxAllowReturn") || "0"; } catch (e) {}
+    if (back !== "1") return;
+    try { sessionStorage.removeItem("rtxAllowReturn"); } catch (e) {}
+    var raw = null;
+    try { raw = localStorage.getItem("rtxStage"); } catch (e) {}
+    if (!raw) return;
+    var p = null;
+    try { p = JSON.parse(raw); } catch (e) {}
+    if (!p || !p.stage || Date.now() - p.at > 20 * 60 * 1000) { return; }
+    stageId = p.stage;
+    if (p.url) stageUrl = p.url;
+    try {
+      var a = await (await fetch("/api/tiktoktest/account?k=" + TEST_KEY)).json();
+      if (a.connected) { panel(a.username); }
+      else { show(); msg.textContent = "TikTok is still not connected — tap Auto post again."; }
+    } catch (e) { show(); msg.textContent = "account check failed: " + e.message; }
+  })();
+})();
+</script>
+
+<script>
+(function () {
+  var TEST_KEY = "d27dc309743b8f58505e102f73150ac1";
+  var K_KEY = "postpeer:ukey", K_STAGE = "postpeer:stage";
+  function $(id) { return document.getElementById(id); }
+
+  var wrap = $("rtxTestModal"), msg = $("rtxTestMsg"), kicker = $("rtxKicker");
+  var keyBox = $("rtxKey"), panelBox = $("rtxPanel"), postBox = $("rtxPostBox");
+  var acctBox = $("rtxAcctBox"), acctList = null;
+  var keyIn = $("rtxApiKey"), capEl = $("rtxCaption"), postBtn = $("rtxPostNow");
+  var accBtn = $("rtxTestPost"), dlBtn = $("dlBtn");
+  var stageId = "", open = false, lastDlVis = false, forced = false;
+
+  function store(k, v) { try { (k === K_STAGE ? sessionStorage : localStorage).setItem(k, v); } catch (e) {} }
+  function load(k) { try { return (k === K_STAGE ? sessionStorage : localStorage).getItem(k) || ""; } catch (e) { return ""; } }
+  function drop(k) { try { (k === K_STAGE ? sessionStorage : localStorage).removeItem(k); } catch (e) {} }
+  function hasKey() { return keyIn.value.trim().length >= 8; }
+  function ukey() { return keyIn.value.trim(); }
+  function say(t) { msg.textContent = t || ""; msg.style.color = ""; }
+  function err(t) { msg.textContent = t || ""; msg.style.color = "#F87171"; }
+  function showWrap() { wrap.style.display = "block"; }
+  function hideWrap() { wrap.style.display = "none"; }
+
+  function readyHeader() {
+    kicker.textContent = "Render complete";
+    $("rtxTitle").textContent = "Your video is ready";
+    $("rtxSub").textContent = "Choose what happens next:";
+  }
+  function postHeader() {
+    kicker.textContent = "PostPeer auto post";
+    $("rtxTitle").textContent = "Post directly to TikTok";
+  }
+  function hideInner() { keyBox.style.display = "none"; panelBox.style.display = "none"; }
+  function closePanel() {
+    hideInner(); readyHeader(); say(""); hideWrap(); open = false;
+  }
+  function openKey() {
+    hideInner(); postHeader(); showWrap();
+    $("rtxSub").textContent = "";
+    keyBox.style.display = "block"; open = true;
+  }
+  function openPanel() {
+    hideInner(); postHeader(); showWrap();
+    panelBox.style.display = "block"; open = true;
+    if (postBtn) { postBtn.textContent = "Post to TikTok"; postBtn.disabled = false; postBtn.style.opacity = "1"; }
+  }
+
+  function ufetch(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ "x-user-key": ukey() }, opts.headers || {});
+    return fetch(path, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        return { status: r.status, body: j || {} };
+      });
+    });
+  }
+
+  function applyState(accounts) {
+    accounts = accounts || [];
+    if (!accounts.length) {
+      acctBox.style.display = "block";
+      postBox.style.display = "none";
+      $("rtxKeyMsg").textContent = "API key connected. Add a TikTok account to continue.";
+      $("rtxSub").textContent = "";
+      return;
+    }
+    acctBox.style.display = "none";
+    postBox.style.display = "block";
+    var a = accounts[0];
+    $("rtxUser").textContent = "@" + String(a.username || "connected").replace(/^@/, "");
+    var img = $("rtxAvatar");
+    if (img) {
+      img.onerror = function () { this.onerror = null; this.src = "/assets/tiktok-logo2.jpg"; };
+      if (a.avatar) img.src = a.avatar; else img.src = "/assets/tiktok-logo2.jpg";
+    }
+    $("rtxSub").textContent = "TikTok connected. Add a caption, then post.";
+  }
+
+  function rejectKey(why) {
+    drop(K_KEY); keyIn.value = "";
+    openKey();
+    $("rtxTitle").textContent = "Auto Post";
+    $("rtxSub").textContent = "Enter your PostPeer API key to continue.";
+    err(why || "That API key was not accepted.");
+    try { keyIn.focus(); } catch (e) {}
+    return false;
+  }
+
+  async function toPanel() {
+    var r = await ufetch("/api/tiktoktest/ukey-account");
+    if (!r.body.ok) return rejectKey(r.body.error);
+    applyState(r.body.accounts || []);
+    say("");
+    openPanel();
+    return true;
+  }
+
+  capEl.addEventListener("input", function () {
+    $("rtxCount").textContent = capEl.value.length + " / 2200";
+  });
+
+  function logout() {
+    drop(K_KEY); drop(K_STAGE);
+    keyIn.value = ""; capEl.value = ""; stageId = "";
+    openKey();
+    $("rtxSub").textContent = "Post straight to your TikTok account.";
+    say("");
+  }
+
+  try { sessionStorage.removeItem("rtxAllowReturn"); } catch (e) {}
+
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin) return;
+    if (e.data === "postpeer:connected") { say("Checking your TikTok connection\u2026"); toPanel(); }
+  });
+
+  var params = new URLSearchParams(location.search);
+  if (params.get("postpeer") === "connected") {
+    if (params.get("popup") === "1") {
+      try { if (window.opener) window.opener.postMessage("postpeer:connected", location.origin); } catch (e) {}
+      var closed = false;
+      try { window.close(); closed = true; } catch (e) {}
+      try {
+        if (!closed && !window.closed) {
+          document.body.innerHTML =
+            "<div style=\"font:15px/1.5 system-ui,-apple-system,sans-serif;color:#888;" +
+            "padding:32px;text-align:center\">Connected. You can close this window.</div>";
+        }
+      } catch (e) {}
+      return;
+    }
+    history.replaceState(null, "", location.pathname);
+    keyIn.value = load(K_KEY); stageId = load(K_STAGE);
+    if (hasKey()) { say("Checking your TikTok connection\u2026"); toPanel(); } else { openKey(); }
+    forced = true;
+  } else if (params.get("reset") === "1") {
+    history.replaceState(null, "", location.pathname);
+    logout();
+    forced = true;
+  } else {
+    keyIn.value = load(K_KEY);
+    stageId = load(K_STAGE);
+    readyHeader();
+  }
+
+  function syncButtons() {
+    var pct = document.getElementById("progressPct");
+    var txt = pct ? String(pct.textContent).trim() : "";
+    var num = parseInt(txt, 10);
+    var isNum = /^\d{1,3}%?$/.test(txt);
+    var done = isNum && num >= 100;
+    var running = isNum && num > 0 && num < 100;
+
+    if (running && (open || forced)) {
+      open = false; forced = false;
+      hideInner(); readyHeader(); say("");
+    }
+
+    if (!done) {
+      lastDlVis = false;
+      if (accBtn.style.display !== "none") accBtn.style.display = "none";
+      if (dlBtn && dlBtn.style.display !== "none") { dlBtn.style.display = "none"; dlBtn.disabled = true; }
+      if (againBtn && againBtn.style.display !== "none") againBtn.style.display = "none";
+    } else {
+      lastDlVis = true;
+      if (accBtn.style.display !== "flex") accBtn.style.display = "flex";
+      if (dlBtn && dlBtn.style.display === "none") { dlBtn.style.display = ""; dlBtn.disabled = false; }
+      if (againBtn && againBtn.style.display === "none") againBtn.style.display = "";
+    }
+
+    var want = ((done && open) || forced) ? "block" : "none";
+    if (wrap.style.display !== want) wrap.style.display = want;
+  }
+  setInterval(syncButtons, 400);
+
+  accBtn.onclick = async function () {
+    if (open) { closePanel(); return; }
+    say("Preparing your video\u2026");
+    if (!stageId && !window.__rtxOutBlob) {
+      try {
+        var wantJob = (window.__rtxJob && window.__rtxJob.id) || "";
+        if (!wantJob) { try { wantJob = sessionStorage.getItem("rtx_job") || ""; } catch (e) {} }
+        var r = await fetch("/api/tiktoktest/prepare?k=" + TEST_KEY, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId: wantJob })
+        });
+        var j = await r.json().catch(function () { return {}; });
+        if (!j || !j.ok) {
+          open = true;
+          showWrap();
+          err((j && j.error) || "Could not stage the video.");
+          return;
+        }
+        stageId = j.stageId;
+        store(K_STAGE, stageId);
+      } catch (e) { err("Prepare failed: " + e.message); return; }
+    }
+    say("");
+    if (hasKey()) { openPanel(); toPanel(); return; }
+    openKey();
+  };
+
+  $("rtxKeyGet").onclick = function () {
+    window.open("https://www.postpeer.dev/login?via=johnquality", "_blank", "noopener");
+  };
+
+  $("rtxKeyGo").onclick = async function () {
+    if (!hasKey()) { err("Paste your PostPeer API key first."); try { keyIn.focus(); } catch (e) {} return; }
+    store(K_KEY, ukey());
+    say("Checking your PostPeer account\u2026");
+    await toPanel();
+  };
+
+  $("rtxConnect").onclick = async function () {
+    say("Opening TikTok\u2026");
+    var base = location.origin + location.pathname;
+
+    var r = await ufetch("/api/tiktoktest/ukey-connect?back=" +
+                         encodeURIComponent(base + "?postpeer=connected&popup=1"));
+    if (!r.body.url) { err(r.body.error || "PostPeer returned no connect URL."); return; }
+
+    var w = null;
+    try {
+      w = window.open(r.body.url, "postpeer_connect",
+                      "width=560,height=780,menubar=no,toolbar=no,scrollbars=yes");
+    } catch (e) {}
+
+    if (!w) {
+      var r2 = await ufetch("/api/tiktoktest/ukey-connect?back=" +
+                            encodeURIComponent(base + "?postpeer=connected"));
+      if (r2.body.url) { location.href = r2.body.url; return; }
+      err("Popup blocked and no fallback URL available.");
+      return;
+    }
+
+    say("Approve access in the TikTok window\u2026");
+    var ticks = 0;
+    var timer = setInterval(function () {
+      ticks++;
+      if (w.closed) {
+        clearInterval(timer);
+        say("Checking your TikTok connection\u2026");
+        toPanel();
+        return;
+      }
+      if (ticks > 300) { clearInterval(timer); say(""); return; }
+      if (ticks % 4 !== 0) return;
+      ufetch("/api/tiktoktest/ukey-account").then(function (res) {
+        if (!res.body || !res.body.ok || !res.body.connected) return;
+        clearInterval(timer);
+        applyState(res.body.accounts || []);
+        say("TikTok connected. Add a caption, then post.");
+        openPanel();
+      });
+    }, 1200);
+  };
+
+  $("rtxLogout").onclick = logout;
+  var lo2 = $("rtxLogout2");
+  if (lo2) lo2.onclick = logout;
+
+  var progTimer = null, progPct = 0, progCeiling = 0, progDone = false;
+
+  function progRender() { $("rtxProgFill").style.width = progPct.toFixed(1) + "%"; }
+  function progLabel(t) { $("rtxProgLabel").textContent = t; }
+
+  function barStart() {
+    $("rtxProgWrap").style.display = "block";
+    $("rtxProgLabel").style.color = "";
+    progPct = 0; progCeiling = 0; progDone = false;
+    var _progT0 = Date.now();
+    var _lastPct = 0;
+    var _fill = $("rtxProgFill");
+    _fill.classList.add("rtx-progress-live");
+    progRender();
+    progLabel("Uploading to TikTok\u2026");
+    _fill.style.background = "";
+    postBtn.textContent = "Posting\u2026";
+    if (progTimer) clearInterval(progTimer);
+    progTimer = setInterval(function () {
+      if (progDone) return;
+      var elapsed = (Date.now() - _progT0) / 1000;
+      var target = elapsed < 62
+        ? Math.min(90, elapsed * 1.45)
+        : Math.min(99.4, 90 + (elapsed - 62) * 0.08);
+      progCeiling = Math.max(progCeiling, target);
+      var step = Math.max(0.22, (progCeiling - progPct) * 0.28);
+      progPct = Math.min(progCeiling, progPct + step);
+      if (progPct <= _lastPct && progPct < 99.4) progPct = Math.min(99.4, _lastPct + 0.08);
+      _lastPct = progPct;
+      progRender();
+    }, 250);
+  }
+
+  function barCeiling(c, label) {
+    if (label) progLabel(label);
+    if (c > progCeiling) progCeiling = c;
+  }
+
+  function barFinish(label) {
+    progDone = true;
+    if (progTimer) { clearInterval(progTimer); progTimer = null; }
+    $("rtxProgFill").classList.remove("rtx-progress-live");
+    progPct = 100; progRender();
+    $("rtxProgFill").style.background = "#2ECC71";
+    $("rtxProgLabel").style.color = "#2ECC71";
+    progLabel(label || "Posted to TikTok");
+    postBtn.textContent = "Posted!";
+    postBtn.disabled = true; postBtn.style.opacity = "1";
+  }
+
+  function barFail(label) {
+    progDone = true;
+    if (progTimer) { clearInterval(progTimer); progTimer = null; }
+    $("rtxProgFill").classList.remove("rtx-progress-live");
+    progLabel(label || "Upload failed");
+    $("rtxProgLabel").style.color = "#F87171";
+    postBtn.textContent = "Post to TikTok";
+    postBtn.disabled = false; postBtn.style.opacity = "1";
+  }
+
+  postBtn.onclick = async function () {
+    if (!stageId && !window.__rtxOutBlob) { err("This upload expired \u2014 patch the video again."); return; }
+    say("");
+    barStart();
+    postBtn.disabled = true; postBtn.style.opacity = ".55";
+
+    var r;
+    if (window.__rtxOutBlob) {
+      try {
+        var _id = (Date.now().toString(16) + Math.random().toString(16).slice(2, 10)).slice(0, 24);
+        var _sz = 8 * 1024 * 1024;
+        var _parts = Math.ceil(window.__rtxOutBlob.size / _sz);
+        var _next = 0;
+        var _worker = async function () {
+          for (;;) {
+            var i = _next++;
+            if (i >= _parts) return;
+            var piece = window.__rtxOutBlob.slice(i * _sz, Math.min((i + 1) * _sz, window.__rtxOutBlob.size));
+            var rr = await fetch("/api/tiktoktest/pp-chunk?id=" + _id + "&i=" + i, {
+              method: "POST",
+              headers: { "Content-Type": "application/octet-stream" },
+              body: piece
+            });
+            if (!rr.ok) throw new Error("chunk " + (i + 1) + "/" + _parts + " failed (HTTP " + rr.status + ")");
+          }
+        };
+        await Promise.all([_worker(), _worker(), _worker()]);
+        var jr = await ufetch("/api/tiktoktest/pp-join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: ukey(), id: _id })
+        });
+        var uj = (jr && jr.body) || {};
+        if (!uj.ok || !uj.publicUrl) {
+          barFail(uj.error || "Upload to PostPeer failed.");
+          return;
+        }
+        r = await ufetch("/api/tiktoktest/pp-post", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: ukey(), caption: capEl.value, publicUrl: uj.publicUrl })
+        });
+      } catch (e) { barFail("Local post failed: " + e.message); return; }
+    } else {
+      try {
+        r = await ufetch("/api/tiktoktest/ukey-publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stageId: stageId, caption: capEl.value })
+        });
+      } catch (e) { barFail("Upload failed: " + e.message); return; }
+    }
+
+    if (!r.body.ok) {
+      if (r.body.needConnect) applyState([]);
+      barFail(r.body.error || "Post failed.");
+      return;
+    }
+
+    drop(K_STAGE);
+    barCeiling(99, "TikTok is processing\u2026");
+
+    for (var i = 0; i < 60; i++) {
+      await new Promise(function (go) { setTimeout(go, 5000); });
+      var s = await ufetch("/api/tiktoktest/ukey-status/" + r.body.postId);
+      var b = s.body || {};
+      if (b.status === "published") {
+        barFinish(b.platformPostUrl ? ("Posted \u2014 " + b.platformPostUrl) : "Posted to TikTok");
+        return;
+      }
+      if (b.status === "failed") { barFail(b.errorMessage || "TikTok rejected the post"); return; }
+      if (b.status === "processing") barCeiling(99, "TikTok is processing\u2026");
+      else if (b.status === "pending") barCeiling(99, "Waiting for TikTok\u2026");
+    }
+    barCeiling(99, "Still checking TikTok\u2026");
+    for (var j = 0; j < 40; j++) {
+      await new Promise(function (go) { setTimeout(go, 15000); });
+      var s2 = await ufetch("/api/tiktoktest/ukey-status/" + r.body.postId);
+      var b2 = s2.body || {};
+      if (b2.status === "published") {
+        barFinish(b2.platformPostUrl ? ("Posted \u2014 " + b2.platformPostUrl) : "Posted to TikTok");
+        return;
+      }
+      if (b2.status === "failed") { barFail(b2.errorMessage || "TikTok rejected the post"); return; }
+    }
+    barFail("Timed out waiting for TikTok \u2014 check your TikTok inbox/app");
+  };
+
+  function resetForNewRun() {
+    if (progTimer) { clearInterval(progTimer); progTimer = null; }
+    progDone = true; progPct = 0; progCeiling = 0;
+    var fill = $("rtxProgFill");
+    if (fill) { fill.classList.remove("rtx-progress-live"); fill.style.width = "0%"; fill.style.background = ""; }
+    var pw = $("rtxProgWrap"); if (pw) pw.style.display = "none";
+    if (postBtn) { postBtn.textContent = "Post to TikTok"; postBtn.disabled = false; postBtn.style.opacity = "1"; }
+    if (capEl) capEl.value = "";
+    var count = $("rtxCount"); if (count) count.textContent = "0 / 2200";
+    stageId = ""; drop(K_STAGE); open = false; forced = false; lastDlVis = false;
+    hideInner(); readyHeader(); say(""); hideWrap();
+  }
+
+  window.__rtx = { toPanel: toPanel, logout: logout, hasKey: hasKey, applyState: applyState,
+                   closePanel: closePanel, resetForNewRun: resetForNewRun, syncButtons: syncButtons, isOpen: function () { return open; } };
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"a131f993bc2f42d7b56ebe5ed6b1e3db","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
