@@ -2,7 +2,7 @@
   "name": "john-quality-backend",
   "version": "2.0.0",
   "private": true,
-  "description": "JOHN_QUALITY — Video Optimizer backend (Cloudinary + no-login + unlimited)",
+  "description": "JOHN_QUALITY — Video Optimizer backend (Google + Firestore + Cloudinary)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,6 +14,8 @@
   "dependencies": {
     "express": "^4.19.2",
     "cloudinary": "^2.5.1",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.6.0",
+    "jsonwebtoken": "^9.0.2"
   }
 }
