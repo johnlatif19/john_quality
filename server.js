@@ -1,13 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
-   JOHN_QUALITY — Backend (Google Auth + Firestore + Cloudinary)
-   
-   Auth flow:
-   1. User clicks "Sign in with Google" on the website
-   2. Firebase Client SDK gets an ID token from Google
-   3. Client sends the ID token to POST /api/auth/google
-   4. Server verifies the token with Firebase Admin
-   5. Server creates/finds the user in Firestore, returns a session JWT
-   6. Client stores the JWT and uses it in X-Patch-Token for API calls
+   JOHN_QUALITY — Backend server
+   Railway + multer + Cloudinary + Firebase
    ═══════════════════════════════════════════════════════════════ */
 
 "use strict";
@@ -20,16 +13,16 @@ const path = require("path");
 const jwt = require("jsonwebtoken");
 const { v2: cloudinary } = require("cloudinary");
 const admin = require("firebase-admin");
+const multer = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const PUBLIC_BASE = (process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`).replace(/\/+$/, "");
 
 /* ── Config ─────────────────────────────────────────────────── */
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const TOKEN_TTL_MS   = 5 * 60 * 1000;            // 5 minutes
-const JOB_TTL_MS     = 24 * 60 * 60 * 1000;      // 24 hours
-const UPLOAD_TTL_MS  = 60 * 60 * 1000;           // 1 hour
+const TOKEN_TTL_MS   = 5 * 60 * 1000;
+const JOB_TTL_MS     = 24 * 60 * 60 * 1000;
+const UPLOAD_TTL_MS  = 60 * 60 * 1000;
 const SECRET         = process.env.JQ_SECRET || "john_quality_default_secret_change_me";
 const ADMIN_SECRET   = process.env.ADMIN_SECRET || "admin_change_me";
 const CF_FOLDER      = process.env.CLOUDINARY_FOLDER || "john_quality";
@@ -47,7 +40,6 @@ try {
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // Fix escaped newlines from .env
         privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
       }),
     });
@@ -72,6 +64,12 @@ function cloudinaryReady() {
   return !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 }
 
+/* ── Multer (in-memory) ─────────────────────────────────────── */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB
+});
+
 /* ── In-memory stores ───────────────────────────────────────── */
 const uploads = new Map();
 const jobs = new Map();
@@ -84,8 +82,8 @@ setInterval(() => {
 }, 60_000);
 
 /* ── Middleware ─────────────────────────────────────────────── */
-app.use(express.json({ limit: "1mb" }));
-app.use(express.raw({ type: "application/octet-stream", limit: "60mb" }));
+// NOTE: no global express.json() — endpoints that need JSON will parse it themselves.
+// This avoids conflicts with multipart form-data handled by multer.
 
 app.use((req, res, next) => {
   const origin = req.headers.origin || "*";
@@ -169,55 +167,38 @@ app.get("/api/health", (req, res) => {
 /* ═══════════════════════════════════════════════════════════════
    AUTH — Google Sign-In via Firebase
    ═══════════════════════════════════════════════════════════════ */
-
-/* POST /api/auth/google
-   Body: { idToken: "..." }
-   Verifies the Firebase ID token, upserts the user in Firestore,
-   returns a 30-day session JWT. */
-app.post("/api/auth/google", async (req, res) => {
+app.post("/api/auth/google", express.json(), async (req, res) => {
   if (!firebaseReady) {
-    return res.status(503).json({ ok: false, error: "Firebase not configured on the server." });
+    return res.status(503).json({ ok: false, error: "Firebase not configured." });
   }
   const idToken = String((req.body && req.body.idToken) || "");
   if (!idToken) return res.status(400).json({ ok: false, error: "Missing idToken." });
 
   try {
-    // Verify the Firebase ID token
     const decoded = await admin.auth().verifyIdToken(idToken);
     const uid = decoded.uid;
     const email = decoded.email || "";
     const name = decoded.name || email.split("@")[0] || "User";
     const picture = decoded.picture || null;
 
-    if (!email) {
-      return res.status(400).json({ ok: false, error: "Google account has no email." });
-    }
+    if (!email) return res.status(400).json({ ok: false, error: "No email in token." });
 
-    // Upsert the user in Firestore
     const userRef = db.collection("users").doc(uid);
     const snap = await userRef.get();
     const now = Date.now();
 
     if (!snap.exists) {
       await userRef.set({
-        uid,
-        email,
-        name,
-        picture,
+        uid, email, name, picture,
         createdAt: now,
         lastLoginAt: now,
         patchesUsed: 0,
-        tier: "premium", // everyone is premium
+        tier: "premium",
       });
     } else {
-      await userRef.update({
-        lastLoginAt: now,
-        name,
-        picture,
-      });
+      await userRef.update({ lastLoginAt: now, name, picture });
     }
 
-    // Issue a 30-day session JWT
     const sessionToken = jwt.sign(
       { uid, email, name, picture },
       SECRET,
@@ -227,13 +208,7 @@ app.post("/api/auth/google", async (req, res) => {
     res.json({
       ok: true,
       sessionToken,
-      user: {
-        uid,
-        email,
-        name,
-        picture,
-        tier: "premium",
-      },
+      user: { uid, email, name, picture, tier: "premium" },
     });
   } catch (e) {
     console.error("Google sign-in failed:", e);
@@ -241,18 +216,16 @@ app.post("/api/auth/google", async (req, res) => {
   }
 });
 
-/* GET /api/me — returns the current user from the session JWT */
 app.get("/api/me", requireSession, async (req, res) => {
   try {
     const snap = await db.collection("users").doc(req.session.uid).get();
-    if (!snap.exists) {
-      return res.status(404).json({ ok: false, error: "User not found." });
-    }
+    if (!snap.exists) return res.status(404).json({ ok: false, error: "User not found." });
     const u = snap.data();
     res.json({
       logged_in: true,
       uid: u.uid,
       email: u.email,
+      username: u.name,
       name: u.name,
       picture: u.picture,
       tier: u.tier || "premium",
@@ -264,9 +237,7 @@ app.get("/api/me", requireSession, async (req, res) => {
   }
 });
 
-/* POST /api/auth/logout */
 app.post("/api/auth/logout", (req, res) => {
-  // Client just drops the JWT. Nothing to do server-side.
   res.json({ ok: true });
 });
 
@@ -292,7 +263,7 @@ app.get("/api/stats", async (req, res) => {
       engine: {
         status: "ONLINE",
         uptime: humanUptime(),
-        lastPatchAt: jobLog.find((j) => j.result === "ok")?.ts || 0,
+        lastPatchAt: (jobLog.find((j) => j.result === "ok") || {}).ts || 0,
       },
     });
   } catch (e) {
@@ -312,11 +283,13 @@ function buildDailySeries(days) {
   return out;
 }
 function humanUptime() {
-  return `${Math.floor(process.uptime() / 60)}m`;
+  const s = Math.floor(process.uptime());
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   PATCHER — mint tokens, accept uploads, upload to Cloudinary
+   PATCHER
    ═══════════════════════════════════════════════════════════════ */
 
 app.post("/api/authorize", requireSession, (req, res) => {
@@ -329,7 +302,7 @@ app.post("/api/authorize", requireSession, (req, res) => {
   res.json({ ok: true, token, tier: "premium", patches_used: 0, patches_limit: null });
 });
 
-app.post("/api/patch-rtx/job-record", requireToken, async (req, res) => {
+app.post("/api/patch-rtx/job-record", requireToken, express.json(), async (req, res) => {
   const q = req.query || {};
   const entry = {
     ts: Date.now(),
@@ -344,7 +317,6 @@ app.post("/api/patch-rtx/job-record", requireToken, async (req, res) => {
   jobLog.unshift(entry);
   if (jobLog.length > 500) jobLog.length = 500;
 
-  // Bump the user's patchesUsed counter in Firestore
   if (firebaseReady && entry.result === "ok" && req.jqToken && req.jqToken.userId) {
     try {
       await db.collection("users").doc(req.jqToken.userId).update({
@@ -356,17 +328,17 @@ app.post("/api/patch-rtx/job-record", requireToken, async (req, res) => {
   res.json({ ok: true, used: 0, limit: null });
 });
 
-app.post("/api/patch-rtx/job-complete", requireToken, (req, res) => {
+app.post("/api/patch-rtx/job-complete", requireToken, express.json(), (req, res) => {
   res.json({ ok: true });
 });
-app.post("/api/patch-rtx/local-use", requireToken, (req, res) => {
+app.post("/api/patch-rtx/local-use", requireToken, express.json(), (req, res) => {
   res.json({ ok: true, used: 0, limit: null });
 });
-app.post("/api/patch-rtx/local-release", requireToken, (req, res) => {
+app.post("/api/patch-rtx/local-release", requireToken, express.json(), (req, res) => {
   res.json({ ok: true });
 });
 
-/* ── Cloudinary upload ──────────────────────────────────────── */
+/* ── Cloudinary upload helper ───────────────────────────────── */
 function uploadToCloudinary(buffer, filename) {
   return new Promise((resolve, reject) => {
     if (!cloudinaryReady()) return reject(new Error("Cloudinary not configured."));
@@ -405,93 +377,56 @@ app.get("/api/patch-rtx/latest-job", (req, res) => {
   return res.redirect(302, best.url);
 });
 
-/* ── Chunked upload ─────────────────────────────────────────── */
-app.post("/api/patch-rtx/up/:id", requireToken, (req, res) => {
-  const id = req.params.id;
-  const offset = parseInt(req.headers["x-upload-offset"] || "0", 10);
-  const total = parseInt(req.headers["x-upload-size"] || "0", 10);
-  const partSize = parseInt(req.headers["x-upload-part-size"] || "0", 10);
-  const filename = String(req.headers["x-filename"] || "input.mp4");
-  const isNew = req.headers["x-upload-new"] === "1";
-
-  let up = uploads.get(id);
-  if (!up) {
-    if (!isNew && offset > 0) return res.status(409).json({ ok: false, error: "Upload session not found.", received: 0 });
-    up = { size: total, name: filename, chunks: new Map(), received: 0, expiresAt: Date.now() + UPLOAD_TTL_MS };
-    uploads.set(id, up);
+/* ═══════════════════════════════════════════════════════════════
+   MAIN PATCH ENDPOINT — multipart/form-data (multer)
+   ═══════════════════════════════════════════════════════════════ */
+app.post("/api/patch-rtx", requireToken, upload.single("file"), async (req, res) => {
+  if (!req.file || !req.file.buffer || req.file.buffer.length === 0) {
+    return res.status(400).json({ ok: false, error: "No file received." });
   }
-  const buf = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || []);
-  if (buf.length === 0) return res.status(400).json({ ok: false, error: "Empty chunk." });
-  up.chunks.set(offset, buf);
-  up.received = Array.from(up.chunks.values()).reduce((s, b) => s + b.length, 0);
-  up.expiresAt = Date.now() + UPLOAD_TTL_MS;
+  const raw = req.file.buffer;
+  const filename = String(req.file.originalname || req.headers["x-filename"] || "input.mp4");
+  const wantsH264 = req.body && (req.body.h264 === "1" || req.headers["x-convert-h264"] === "1");
 
-  const partIndex = partSize > 0 ? Math.floor(offset / partSize) : 0;
-  res.json({ ok: true, received: up.received, size: up.size, part: partIndex });
-});
-
-app.get("/api/patch-rtx/up/:id", requireToken, (req, res) => {
-  const up = uploads.get(req.params.id);
-  if (!up) return res.json({ ok: true, received: 0, size: 0, partSize: 0, parts: [] });
-  res.json({ ok: true, received: up.received, size: up.size, partSize: 0, parts: [] });
-});
-
-/* ── Finish: assemble + patch + upload to Cloudinary ───────── */
-app.post("/api/patch-rtx/up/:id/finish", requireToken, async (req, res) => {
-  const up = uploads.get(req.params.id);
-  if (!up) return res.status(410).json({ ok: false, error: "Upload expired." });
-
-  const sorted = Array.from(up.chunks.entries()).sort((a, b) => a[0] - b[0]);
-  const assembled = Buffer.concat(sorted.map(([, b]) => b));
+  console.log(`[patch-rtx] Received ${filename} (${(raw.length / 1048576).toFixed(2)} MB), h264=${wantsH264}`);
 
   try {
-    const patched = patchMp4(assembled);
-    const result = await uploadToCloudinary(patched, up.name);
-    const jobId = newId(24);
-    jobs.set(jobId, {
-      url: result.secure_url,
-      publicId: result.public_id,
-      name: up.name,
-      size: up.size,
-      expiresAt: Date.now() + JOB_TTL_MS,
-      finishedAt: Date.now(),
-    });
-    uploads.delete(req.params.id);
-    res.setHeader("X-Job-Id", jobId);
-    res.json({ ok: true, jobId, url: result.secure_url, publicId: result.public_id, size: patched.length });
-  } catch (e) {
-    console.error("finish failed:", e);
-    res.status(500).json({ ok: false, error: e.message || "Patch or upload failed." });
-  }
-});
-
-/* ── Single-shot upload ─────────────────────────────────────── */
-app.post("/api/patch-rtx", requireToken, async (req, res) => {
-  const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || "");
-  if (raw.length === 0) return res.status(400).json({ ok: false, error: "Empty request body." });
-  try {
+    // 1) Patch the MP4 (box-level metadata patch, in-memory)
     const patched = patchMp4(raw);
-    const filename = String(req.headers["x-filename"] || "input.mp4");
-    const result = await uploadToCloudinary(patched, filename);
-    const jobId = newId(24);
-    jobs.set(jobId, {
-      url: result.secure_url,
-      publicId: result.public_id,
-      name: filename,
-      size: raw.length,
-      expiresAt: Date.now() + JOB_TTL_MS,
-      finishedAt: Date.now(),
-    });
-    res.setHeader("X-Job-Id", jobId);
-    res.json({ ok: true, jobId, url: result.secure_url, publicId: result.public_id, size: patched.length });
+    console.log(`[patch-rtx] Patched to ${(patched.length / 1048576).toFixed(2)} MB`);
+
+    // 2) Try to upload the result to Cloudinary (non-fatal if it fails)
+    let result = null;
+    try {
+      result = await uploadToCloudinary(patched, filename);
+      const jobId = newId(24);
+      jobs.set(jobId, {
+        url: result.secure_url,
+        publicId: result.public_id,
+        name: filename,
+        size: patched.length,
+        expiresAt: Date.now() + JOB_TTL_MS,
+        finishedAt: Date.now(),
+      });
+      res.setHeader("X-Job-Id", jobId);
+      res.setHeader("X-Cloudinary-Url", result.secure_url);
+      console.log(`[patch-rtx] Uploaded to Cloudinary: ${result.secure_url}`);
+    } catch (e) {
+      console.warn("[patch-rtx] Cloudinary upload failed, serving locally:", e.message);
+    }
+
+    // 3) Send the patched file directly to the browser
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Length", String(patched.length));
+    res.end(patched);
   } catch (e) {
-    console.error("patch failed:", e);
-    res.status(500).json({ ok: false, error: e.message || "Patch or upload failed." });
+    console.error("[patch-rtx] failed:", e);
+    res.status(500).json({ ok: false, error: e.message || "Patch failed." });
   }
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   MP4 PATCHER (same as before)
+   MP4 PATCHER
    ═══════════════════════════════════════════════════════════════ */
 const ENCODER_TAG = "JOHN_QUALITY - https://www.johnquality.xyz/ - v2.0";
 const CONTAINERS = new Set(["moov", "trak", "mdia", "minf", "stbl"]);
@@ -603,7 +538,7 @@ function applyWatermark(moovBoxes, videoTrak) {
 /* ═══════════════════════════════════════════════════════════════
    ADMIN
    ═══════════════════════════════════════════════════════════════ */
-app.post("/api/admin/login", (req, res) => {
+app.post("/api/admin/login", express.json(), (req, res) => {
   if (String((req.body && req.body.secret) || "") !== ADMIN_SECRET) {
     return res.status(401).json({ ok: false, error: "Invalid admin secret." });
   }
@@ -646,11 +581,11 @@ app.get("/api/admin/jobs", (req, res) => {
 });
 
 /* ── Stubs ──────────────────────────────────────────────────── */
-app.post("/api/chat", (req, res) => {
+app.post("/api/chat", express.json(), (req, res) => {
   const msg = String((req.body && req.body.message) || "").trim();
   res.json({ reply: msg ? "Got your message." : "Ask me anything about the optimizer." });
 });
-app.post("/api/tiktok", (req, res) => {
+app.post("/api/tiktok", express.json(), (req, res) => {
   res.status(503).json({ error: "TikTok analyzer not configured." });
 });
 app.get("/api/usage", (req, res) => {
@@ -675,6 +610,9 @@ app.get("*", (req, res, next) => {
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   if (res.headersSent) return next(err);
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ ok: false, error: "File too large (max 2 GB)." });
+  }
   res.status(500).json({ ok: false, error: err.message || "Internal server error" });
 });
 
@@ -683,7 +621,7 @@ if (require.main === module || process.env.VERCEL !== "1") {
   app.listen(PORT, () => {
     console.log("╔══════════════════════════════════════════════╗");
     console.log("║     JOHN_QUALITY Backend v2.0                ║");
-    console.log("║     Google Auth · Firestore · Cloudinary     ║");
+    console.log("║     Railway · Google · Firestore · Cloudinary ║");
     console.log("╚══════════════════════════════════════════════╝");
     console.log(`  Port         : ${PORT}`);
     console.log(`  Public URL   : ${PUBLIC_BASE}`);
