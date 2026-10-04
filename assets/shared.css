@@ -1,654 +1,1467 @@
 /* ═══════════════════════════════════════════════════════════════
-   RTXFury Method — shared.css · Apple × NVIDIA design system
-   All motion CSS-driven. JS toggles classes/values only.
+   JOHN_QUALITY — shared.js · all pages
+   Google Sign-In (Firebase) · Unlimited · Server-side patching
    ═══════════════════════════════════════════════════════════════ */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#050506; --bg-panel:#0D0D12; --bg-elevated:#15151B;
-  --border:rgba(255,255,255,.08); --border-hi:rgba(255,255,255,.16);
-  --green:#76B900; --green-bright:#8AC919; --green-dim:rgba(118,185,0,.09);
-  --text:#F5F5F7; --text-2:#9E9EA6; --text-3:#686870;
-  --amber:#E8A33D; --red:#E5484D; --cyan:#38BDF8; --blurple:#5865F2;
-  --r:14px; --r2:18px;
-  --ease:cubic-bezier(.22,1,.36,1); --ease-spring:cubic-bezier(.16,1,.3,1);
-  --font:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-  --font-display:"Bahnschrift","DIN Alternate","Arial Narrow","Roboto Condensed",system-ui,Arial,sans-serif;
-  --font-mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,"Liberation Mono",monospace;
-  --nav-h:52px;
-}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:18px;line-height:1.75;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh;width:100%;min-width:0}
-button{font-family:inherit;cursor:pointer;border:0;outline:0;background:none;color:inherit}
-a{color:inherit;text-decoration:none}
-input{font-family:inherit}
-::selection{background:rgba(118,185,0,.3);color:#fff}
-::-webkit-scrollbar{width:9px;height:9px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:#232329;border-radius:99px}
-::-webkit-scrollbar-thumb:hover{background:var(--green)}
+(function () {
+  "use strict";
 
-/* ── Keyframes ────────────────────────────────────────────────── */
-@keyframes pageEnter{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@keyframes fadeSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.35}}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-@keyframes barGrow{from{width:0}to{width:var(--w,100%)}}
-@keyframes spin{to{transform:rotate(360deg)}}
+  /* ── helpers ───────────────────────────────────────────────── */
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const fmt = (n) => { const v = Number(n); return Number.isFinite(v) ? v.toLocaleString("en-US") : "0"; };
+  const el = (tag, cls, html) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (html != null) n.innerHTML = html;
+    return n;
+  };
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-/* ── Layout ───────────────────────────────────────────────────── */
-.page{position:relative;z-index:2;animation:pageEnter .6s var(--ease) both;padding-top:calc(var(--nav-h) + 46px);width:100%;min-height:100vh}
-.container{width:100%;max-width:1000px;margin:0 auto;padding:0 clamp(14px,3vw,22px)}
-.mono{font-family:var(--font-mono)}
-.section{padding:38px 0 6px;width:100%}
-.section-kicker{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--green);font-weight:700;display:flex;align-items:center;gap:9px}
-.section-kicker::before{content:"";width:22px;height:1px;background:var(--green);display:inline-block}
-.section-title{font-family:var(--font-display);font-size:clamp(21.5px,2.6vw,27px);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-top:8px}
-.section-sub{color:var(--text-2);font-size:15px;margin-top:7px;max-width:600px;line-height:1.8}
+  /* JOHN_QUALITY: ALL TIERS UNLIMITED */
+  const TIER_MAP = { member: ["Free", 0, "4K120", 120], booster: ["Booster", 0, "4K120", 120], donor: ["Premium", 0, "4K120", 120] };
 
-/* Scroll reveal — only hidden when JS is active */
-.js .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s var(--ease),transform .6s var(--ease);transition-delay:var(--d,0s)}
-.reveal.in{opacity:1;transform:none}
+  function normalizeMe(j) {
+    if (!j) return { user: null, admin: false };
+    if (j.user) {
+      const raw = j.user;
+      let t = raw.tier;
+      if (typeof t === "string") { const m = TIER_MAP[t] || TIER_MAP.member; t = { tier: t, tierLabel: m[0], tierMB: m[1], tierRes: m[2], tierFPS: m[3] }; }
+      if (!t || typeof t !== "object") { const m = TIER_MAP.member; t = { tier: "member", tierLabel: m[0], tierMB: m[1], tierRes: m[2], tierFPS: m[3] }; }
+      return { user: { username: raw.username || raw.display_name || "USER", display_name: raw.display_name, avatar: raw.avatar_url || raw.avatar || null, tier: t }, admin: !!j.admin };
+    }
+    if (!j.logged_in) return { user: null, admin: false };
+    const t = j.tier || "member";
+    const [label, mb, res, fps] = TIER_MAP[t] || TIER_MAP.member;
+    return {
+      user: {
+        username: j.username || j.display_name || "USER",
+        display_name: j.display_name,
+        avatar: j.avatar_url || j.avatar || null,
+        tier: { tier: t, tierLabel: label, tierMB: mb, tierRes: res, tierFPS: fps },
+      },
+      admin: false,
+    };
+  }
 
-/* ── Nav — centered glass pill ────────────────────────────────── */
-nav.top-nav,.top-nav{position:fixed;top:16px;left:0;right:0;margin-left:auto;margin-right:auto;z-index:100;width:max-content;max-width:calc(100% - 24px);height:var(--nav-h);display:flex;align-items:center;justify-content:center;gap:16px;padding:0 8px 0 16px;border:1px solid var(--border);border-radius:16px;background:rgba(12,12,15,.72);backdrop-filter:blur(22px) saturate(1.4);box-shadow:0 12px 36px rgba(0,0,0,.45),0 1px 0 rgba(255,255,255,.04) inset;animation:fadeSlideUp .5s var(--ease) .05s both}
-.nav-logo{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:700;letter-spacing:.1em;font-size:15.5px;text-transform:uppercase;white-space:nowrap}
-.nav-logo-glyph{width:20px;height:20px;border-radius:6px;object-fit:cover;transition:transform .3s var(--ease-spring)}
-.nav-logo:hover .nav-logo-glyph{transform:rotate(-10deg) scale(1.06)}
-.nav-links{display:flex;align-items:center;gap:2px;margin:0 8px;flex-shrink:0}
-.nav-link{position:relative;font-size:15px;font-weight:500;letter-spacing:.01em;color:var(--text-2);padding:8px 13px;border-radius:9px;transition:color .22s var(--ease),background .22s var(--ease)}
-.nav-link:hover{color:var(--text);background:rgba(255,255,255,.06)}
-.nav-link.active{color:var(--green)}
-.nav-link.active::after{content:"";position:absolute;left:13px;right:13px;bottom:3px;height:2px;background:var(--green);border-radius:2px}
-.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.usage-pill{font-family:var(--font-mono);font-size:12.5px;color:var(--text-2);border:1px solid var(--border);border-radius:99px;padding:6px 12px;background:rgba(255,255,255,.03);white-space:nowrap}
+  /* ── API helpers ──────────────────────────────────────────── */
+  const GET_CACHE = { "/api/stats": 60e3, "/api/health": 120e3 };
+  function cacheRead(k) {
+    try { const raw = sessionStorage.getItem("jqcache:" + k); if (!raw) return null; return JSON.parse(raw); }
+    catch { return null; }
+  }
+  function cacheHit(k) {
+    const e = cacheRead(k);
+    return e && (Date.now() - e.t < GET_CACHE[k]) ? e.v : null;
+  }
+  function cacheStale(k) { const e = cacheRead(k); return e ? e.v : null; }
+  function cacheWrite(k, v) {
+    try { sessionStorage.setItem("jqcache:" + k, JSON.stringify({ t: Date.now(), v })); } catch {}
+  }
 
-/* ── Telegram announcement strip, directly under the nav ───────────
-   Lives inside .page (see each page's markup), so it sits in the gap the fixed
-   nav already reserves on desktop and at the top of the content on mobile.
-   Yellow, with a gift emoji instead of the Telegram glyph. Text is near-black
-   rather than white because white on yellow is unreadable (~1.4:1); this is
-   ~11:1. The strip is only semi-bold (600) so the two <b> phrases stand out. */
-.tg-strip{display:flex;align-items:center;justify-content:center;gap:10px;width:max-content;max-width:calc(100% - 32px);margin:0 auto 6px;padding:11px 22px;border-radius:99px;background:linear-gradient(90deg,#FFE24B,#FFC400);color:#1A1300;font-size:15px;font-weight:600;letter-spacing:.01em;text-align:center;text-decoration:none;box-shadow:0 10px 30px -10px rgba(255,196,0,.65);transition:transform .18s var(--ease),box-shadow .3s var(--ease),filter .2s var(--ease)}
-.tg-strip:hover{transform:translateY(-1px);filter:brightness(1.03);box-shadow:0 10px 28px -10px rgba(255,196,0,.85)}
-.tg-strip svg{width:18px;height:18px;flex:0 0 auto}
-.tg-strip-ico{font-size:1.15em;line-height:1;flex:0 0 auto}
-.tg-strip b{font-weight:800}
-@media(max-width:700px){.tg-strip{font-size:13px;padding:9px 16px;gap:8px;margin-bottom:4px;line-height:1.3}.tg-strip svg{width:16px;height:16px}}
+  async function api(path, opts) {
+    const method = (opts && opts.method) || "GET";
+    const cacheable = method === "GET" && !(opts && opts.cache === "no-store") && GET_CACHE[path];
+    if (cacheable) { const hit = cacheHit(path); if (hit) return hit; }
+    try {
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      const sess = localStorage.getItem("jq_session");
+      if (sess && !opts.headers.Authorization) {
+        opts.headers.Authorization = "Bearer " + sess;
+      }
+      const r = await fetch(path, opts);
+      const ct = r.headers.get("content-type") || "";
+      if (ct.includes("json")) {
+        const out = { ok: r.ok, status: r.status, json: await r.json() };
+        if (cacheable && out.ok && out.json) cacheWrite(path, out);
+        return out;
+      }
+      const out = { ok: r.ok, status: r.status, blob: await r.blob(), headers: r.headers };
+      if (cacheable && out.ok) cacheWrite(path, out);
+      return out;
+    } catch (e) {
+      if (cacheable) { const stale = cacheStale(path); if (stale) return stale; }
+      return null;
+    }
+  }
 
-/* Discord giveaway strip. The element carries .tg-strip as well, so it inherits
-   the whole pill and only the colours are overridden - these rules must stay
-   AFTER the .tg-strip ones so they win. */
-.dc-strip{background:linear-gradient(90deg,#7B8CF5,#5865F2);color:#fff;box-shadow:0 10px 30px -10px rgba(88,101,242,.7)}
-.dc-strip:hover{box-shadow:0 10px 28px -10px rgba(88,101,242,.9)}
-/* The deadline is what people actually scan for, so it is called out.
-   .tg-strip sets text-decoration:none on the anchor; an inline child
-   can still ask for its own underline. */
-.dc-strip .gw-ends{font-weight:800;text-decoration:underline;text-underline-offset:2px}
-/* Status notice strip - shown while the method is being updated. Carries
-   .tg-strip for the pill geometry, so it must stay AFTER those rules; only
-   the colours are overridden. It is a <div>, not a link, so the hover lift
-   inherited from .tg-strip is switched off. */
-.notice-strip{background:linear-gradient(90deg,#DC2626,#B91C1C);color:#fff;box-shadow:0 10px 30px -10px rgba(220,38,38,.6)}
-.notice-strip:hover{transform:none;filter:none;box-shadow:0 10px 30px -10px rgba(220,38,38,.6)}
-/* Links inside the status notice. .tg-strip sets text-decoration:none on the
-   pill, so the underline is requested explicitly, exactly as the .dc-strip
-   .gw-ends rule does. Colour is inherited so the white stays accessible. */
-.notice-strip a{color:inherit;font-weight:800;text-decoration:underline;text-underline-offset:2px}
-.notice-strip a:hover{text-decoration-thickness:2px}
-.usage-pill b{color:var(--green);font-weight:600}
-.nav-ver{font-family:var(--font-mono);font-size:12.5px;color:var(--text-3);border:1px solid var(--border);border-radius:99px;padding:4px 10px;white-space:nowrap}
-.nav-user{display:none;align-items:center;gap:8px;border:1px solid rgba(118,185,0,.3);background:var(--green-dim);border-radius:99px;padding:5px 6px 5px 13px}
-.nav-avatar{width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0}
-.nav-user-name{font-size:12.5px;font-weight:600;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nav-user-tier{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:#050506;background:var(--green);border-radius:99px;padding:3px 8px;text-transform:uppercase}
-.btn-login,.btn-discord{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--blurple);color:#fff;padding:10px 18px;border-radius:9px;min-height:42px;transition:background .2s var(--ease),transform .15s var(--ease),box-shadow .3s var(--ease)}
-.btn-login:hover,.btn-discord:hover{background:#4752C4;box-shadow:0 6px 22px rgba(88,101,242,.35)}
-.btn-login:active,.btn-discord:active{transform:scale(.97)}
-.btn-login.dev{background:none;border:1px solid var(--border-hi);color:var(--green)}
-.btn-login.dev:hover{background:var(--green-dim);box-shadow:none}
-.btn-discord{font-size:14.5px;padding:13px 22px}
-.dl-logo{width:17px;height:17px;flex-shrink:0}
-.btn-ghost{display:none;font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);padding:8px 10px;border-radius:8px;transition:color .2s var(--ease),background .2s var(--ease)}
-.btn-ghost:hover{color:var(--text);background:rgba(255,255,255,.06)}
+  /* ── UI helpers ────────────────────────────────────────────── */
+  function initReveal() {
+    const els = $$(".reveal");
+    if (!("IntersectionObserver" in window)) return els.forEach((e) => e.classList.add("in"));
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.1 });
+    els.forEach((e) => io.observe(e));
+  }
+  function countUp(node, target, dur) {
+    const start = performance.now();
+    (function tick(now) {
+      const p = Math.min(1, (now - start) / (dur || 1200));
+      node.textContent = fmt(Math.round(target * (1 - Math.pow(1 - p, 4))));
+      if (p < 1) requestAnimationFrame(tick);
+    })(start);
+  }
+  function setUsagePill(user) {
+    const pill = $("#nav-usage");
+    if (!pill) return;
+    pill.innerHTML = "<b>Unlimited</b>";
+  }
 
-/* ── Telegram sign-in button ──────────────────────────────────────
-   Sized to match .btn-discord exactly (same font, padding, radius and
-   min-height) so the two line up whether they sit side by side in the hero or
-   stacked full-width in the sign-in prompt. Telegram's own login blue. */
-.btn-tg{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#54a9eb;color:#fff;padding:13px 22px;border-radius:9px;min-height:42px;border:0;cursor:pointer;transition:background .2s var(--ease),transform .15s var(--ease),box-shadow .3s var(--ease)}
-.btn-tg:hover{background:#3f96dc;box-shadow:0 6px 22px rgba(84,169,235,.35)}
-.btn-tg:active{transform:scale(.97)}
-/* Hero: Discord + Telegram side by side. flex:1 1 0 on both buttons makes them
-   EXACTLY the same width whatever their labels are, and align-items:stretch
-   makes them the same height. (Was two auto-width buttons, so "Login with
-   Telegram" came out wider than "Login with Discord".) */
-.login-choices{display:flex;align-items:stretch;justify-content:center;gap:10px;flex-wrap:wrap}
-.login-choices .btn{flex:1 1 0;min-width:215px;justify-content:center;text-align:center}
-/* The Discord/Telegram glyphs read too small at the shared 17px, but .dl-logo is
-   used by the nav pill and the tier CTA too, so this is scoped to the sign-in
-   buttons rather than changed globally. 21px - bigger, not shouty. */
-.login-choices .dl-logo,.login-modal-card .dl-logo{width:21px;height:21px}
+  function renderAuth(user, devMode) {
+    const logout = $("#btn-logout"), chip = $("#nav-user");
+    if (logout) {
+      logout.style.display = user ? "inline-flex" : "none";
+      logout.onclick = async () => { await signOutGoogle(); };
+    }
+    if (user) {
+      if (chip) {
+        chip.style.display = "inline-flex";
+        chip.innerHTML =
+          (user.avatar ? '<img class="nav-avatar" src="' + esc(user.avatar) + '" alt=""/>' : "") +
+          '<span class="nav-user-name" id="nav-user-name"></span>' +
+          '<span class="nav-user-tier" id="nav-user-tier"></span>';
+        const nameEl = $("#nav-user-name");
+        const tierEl = $("#nav-user-tier");
+        if (nameEl) nameEl.textContent = user.username || "USER";
+        if (tierEl) tierEl.textContent = ((user.tier && user.tier.tierLabel) || "Premium").toUpperCase();
+      }
+    } else {
+      if (chip) chip.style.display = "none";
+    }
 
-/* ── Sign-in prompt shown when a signed-out visitor tries to upload ──
-   Both methods offered, instead of dropping them into Discord OAuth. */
-.login-modal{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72)}
-.login-modal.show{display:flex}
-.login-modal-card{position:relative;width:100%;max-width:370px;background:var(--bg-panel);border:1px solid var(--border-hi);border-radius:var(--r2);padding:26px 22px 22px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.65);animation:fadeSlideUp .28s var(--ease) both}
-.login-modal-title{font-family:var(--font-display);font-size:19px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0}
-.login-modal-sub{font-size:13px;color:var(--text-3);margin:8px 0 16px}
-.login-modal-card .btn{display:flex;justify-content:center;width:100%;margin-top:10px}
-.login-modal-x{position:absolute;top:6px;right:12px;background:none;border:0;color:var(--text-3);font-size:24px;line-height:1;cursor:pointer;padding:4px}
-.login-modal-x:hover{color:var(--text)}
+    const hl = $("#hero-login");
+    if (hl) {
+      if (user) { hl.style.display = "none"; hl.innerHTML = ""; }
+      else {
+        hl.style.display = "";
+        hl.innerHTML =
+          '<div class="login-choices">' +
+          '<button class="btn btn-google" type="button" id="hero-google-login">' + GOOGLE_SVG + 'Sign in with Google</button>' +
+          '</div>';
+        const btn = $("#hero-google-login");
+        if (btn) btn.onclick = signInWithGoogle;
+      }
+    }
 
-/* ── Hero ─────────────────────────────────────────────────────── */
-.page-hero{text-align:center;padding:22px 0 10px;width:100%;max-width:1000px;margin-left:auto;margin-right:auto}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:12.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--green);border:1px solid rgba(118,185,0,.3);background:var(--green-dim);border-radius:99px;padding:7px 16px;animation:fadeSlideUp .5s var(--ease) both}
-.hero-badge i{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulseDot 2.4s ease-in-out infinite}
-.page-hero h1{font-family:var(--font-display);font-size:clamp(31.5px,5vw,49.5px);font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.23;margin-top:16px;animation:fadeSlideUp .5s var(--ease) .1s both}
-.page-hero h1 span{color:var(--green)}
-.hero-sub{color:var(--text-2);font-size:16.5px;line-height:1.8;margin-top:10px;animation:fadeSlideUp .5s var(--ease) .18s both}
-.welcome-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px auto 0;max-width:560px;width:100%;flex-wrap:wrap;animation:fadeSlideUp .5s var(--ease) .26s both}
-.welcome-chip{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;max-width:100%;min-width:0;font-size:13.5px;color:var(--text-2);border:1px solid var(--border);background:var(--bg-panel);border-radius:99px;padding:7px 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:border-color .22s var(--ease)}
-.welcome-chip b{color:var(--text);font-weight:600}
-.welcome-chip svg{width:13px;height:13px;color:var(--green)}
+    const bn = $("#bn-login");
+    if (bn) {
+      if (user) {
+        bn.style.display = "none";
+      } else {
+        bn.style.display = "inline-flex";
+        bn.onclick = (e) => { e.preventDefault(); signInWithGoogle(); };
+      }
+    }
 
-/* ── Cards & KPI ──────────────────────────────────────────────── */
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-top:24px}
-.card{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r2);padding:20px;position:relative;transition:transform .28s var(--ease-spring),border-color .25s var(--ease),background .25s var(--ease)}
-.card:hover{transform:translateY(-3px);border-color:var(--border-hi);background:var(--bg-elevated)}
-.kpi-top{display:flex;align-items:flex-start;justify-content:space-between}
-.kpi-icon{width:34px;height:34px;border-radius:10px;background:var(--green-dim);border:1px solid rgba(118,185,0,.28);display:grid;place-items:center;color:var(--green);flex-shrink:0;transition:transform .25s var(--ease-spring),background .25s var(--ease)}
-.kpi-icon svg{width:16px;height:16px}
-.card:hover .kpi-icon{transform:rotate(-8deg) scale(1.08);background:rgba(118,185,0,.18)}
-.kpi-label{font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);font-weight:600}
-.kpi-value{font-family:var(--font-mono);font-size:clamp(27px,3vw,34.5px);font-weight:700;margin-top:10px;letter-spacing:-.02em;transition:color .25s var(--ease)}
-.card:hover .kpi-value{color:var(--green-bright)}
-.kpi-foot{font-family:var(--font-mono);font-size:12px;letter-spacing:.05em;color:var(--text-3);margin-top:7px}
-.engine-status{display:flex;align-items:center;gap:9px;margin-top:12px}
-.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulseDot 2.4s ease-in-out infinite;flex-shrink:0}
-.status-dot.off{background:var(--red)}
-.status-text{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--green);letter-spacing:.07em}
-.engine-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
-.engine-meta span{font-family:var(--font-mono);font-size:12px;color:var(--text-2);border:1px solid var(--border);border-radius:6px;padding:5px 9px}
-.term-line{font-family:var(--font-mono);font-size:12.5px;color:var(--text-3);margin-top:14px;display:flex;align-items:center;gap:8px}
-.term-line .caret{width:7px;height:12px;background:var(--green);animation:blink 1.2s steps(1) infinite;flex-shrink:0}
-.demo-note{display:none;align-items:center;gap:8px;margin-top:14px;font-family:var(--font-mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(232,163,61,.35);background:rgba(232,163,61,.08);border-radius:9px;padding:9px 13px}
-.demo-note i{width:6px;height:6px;border-radius:50%;background:var(--amber);animation:pulseDot 2.4s ease-in-out infinite}
+    const bnLo = $("#bn-logout");
+    if (bnLo) {
+      bnLo.style.display = user ? "flex" : "none";
+      bnLo.onclick = async (ev) => { ev.preventDefault(); await signOutGoogle(); };
+    }
 
+    setUsagePill(user);
+  }
 
+  /* ── Dashboard ─────────────────────────────────────────────── */
+  function initDashboard() {
+    const cmp = $("#cmp");
+    if (cmp) initCompare(cmp);
+    initCompareVideo();
 
-/* ── Tier banner ──────────────────────────────────────────────── */
-.tier-banner{margin-top:24px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;border:1px solid rgba(118,185,0,.26);border-left:3px solid var(--green);background:linear-gradient(120deg,rgba(118,185,0,.07),transparent 55%);border-radius:var(--r2);padding:17px 20px}
-.tier-banner-left{display:flex;align-items:center;gap:15px;flex-wrap:wrap}
-.tier-banner-label{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-3);font-weight:700}
-.tier-banner-name{font-family:var(--font-display);font-size:23px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--green);margin-top:2px}
-.tier-banner-specs{display:flex;gap:7px;flex-wrap:wrap}
-.tier-banner-specs span{font-family:var(--font-mono);font-size:12.5px;color:var(--text-2);border:1px solid var(--border);background:var(--bg-panel);border-radius:6px;padding:5px 9px}
-.patch-bar{width:220px}
-.patch-bar .pb-label{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11.5px;letter-spacing:.07em;color:var(--text-3);text-transform:uppercase;margin-bottom:6px}
-.patch-bar .pb-track{height:6px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:99px;overflow:hidden}
-.patch-bar .pb-fill{height:100%;width:0;background:var(--green);border-radius:99px;animation:barGrow 1.2s var(--ease) .6s both}
-.patch-bar.unlimited .pb-fill{--w:100%}
+    loadAuthState().then((user) => {
+      renderAuth(user, false);
+      if (user) { renderTier(user.tier, user.username, AUTH_ME_RAW); }
+      else {
+        const chip = $("#welcome-chip");
+        if (chip) { chip.style.display = "none"; }
+      }
+    });
 
-/* ── Tier grid ────────────────────────────────────────────────── */
-.tier-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:16px;margin-top:28px;width:100%;align-items:stretch}
-.tier-card{
-  --tier-accent:var(--text-3); --tier-glow:rgba(255,255,255,.10);
-  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,0) 42%),var(--bg-panel);
-  border:1px solid var(--border);border-radius:20px;
-  padding:30px 24px 28px;position:relative;overflow:hidden;
-  display:flex;flex-direction:column;gap:14px;min-height:348px;isolation:isolate;
-  transition:transform .3s var(--ease-spring),border-color .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease);
-}
-.tier-card::before{ /* accent glow wash */
-  content:"";position:absolute;inset:-40% -30% auto;height:75%;z-index:-1;pointer-events:none;
-  background:radial-gradient(58% 100% at 50% 0%,var(--tier-glow),transparent 70%);
-  opacity:0;transition:opacity .4s var(--ease);
-}
-.tier-card::after{ /* shine sweep */
-  content:"";position:absolute;top:0;left:-85%;width:55%;height:100%;z-index:1;pointer-events:none;
-  background:linear-gradient(105deg,transparent,rgba(255,255,255,.09) 48%,transparent 52%);
-  transform:skewX(-18deg);transition:left .65s var(--ease);
-}
-.tier-card:hover{transform:translateY(-6px);border-color:var(--tier-accent);box-shadow:0 22px 44px -18px var(--tier-glow),0 0 0 1px var(--tier-accent) inset}
-.tier-card:hover::before{opacity:1}
-.tier-card:hover::after{left:135%}
-.tier-card[data-tier="member"]{--tier-accent:var(--text-2);--tier-glow:rgba(158,158,166,.14)}
-.tier-card[data-tier="booster"]{--tier-accent:var(--cyan);--tier-glow:rgba(56,189,248,.22)}
-.tier-card[data-tier="donor"]{--tier-accent:var(--green);--tier-glow:rgba(118,185,0,.30)}
-.tier-card .tier-key{display:block;font-family:var(--font-mono);font-size:11.5px;font-weight:700;letter-spacing:.22em;color:var(--text-3);margin-bottom:6px}
-.tier-card .tier-name{font-family:var(--font-display);font-size:clamp(29px,3.4vw,38px);font-weight:800;letter-spacing:.02em;line-height:1.2;text-transform:uppercase;color:var(--tier-accent)}
-.tier-card .tier-sub{font-size:15px;line-height:1.65;color:var(--text-3);margin-top:4px}
-.tier-card .tier-cap{font-family:var(--font-mono);font-size:clamp(29px,3vw,38px);font-weight:700;letter-spacing:-.03em;margin-top:14px;line-height:1;
-  background:linear-gradient(180deg,#fff 20%,var(--tier-accent) 120%);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
-.tier-card .tier-cap small{font-size:15px;color:var(--text-3);font-weight:600;letter-spacing:.02em;-webkit-text-fill-color:var(--text-3)}
-.tier-card .tier-feats{display:flex;flex-direction:column;gap:9px;flex:1 1 auto;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)}
-.tier-card .feat{display:flex;align-items:center;gap:10px;font-size:15.5px;color:var(--text-3);line-height:1.55}
-.tier-card .feat .f-ic{width:15px;height:15px;flex:none;color:var(--tier-accent);stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.95}
-.tier-card .feat b{color:var(--text);font-weight:700}
-.tier-card .feat.no{opacity:.45;text-decoration:line-through}
-.tier-card .feat.no .f-ic{color:var(--text-3)}
-.tier-card .feat .f-ic circle,.tier-card .feat .f-ic rect{fill:none}
-.tier-btn{display:flex;align-items:center;justify-content:center;width:100%;margin-top:16px;padding:12px 16px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#fff;font-family:var(--font-display);font-size:15.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;transition:all .2s var(--ease);cursor:pointer}
-.tier-btn:hover{background:rgba(255,255,255,.12);border-color:var(--tier-accent);color:var(--tier-accent);transform:translateY(-1px)}
-.tier-card[data-tier="donor"] .tier-btn{background:var(--green);border-color:var(--green);color:#050506}
-.tier-card[data-tier="donor"] .tier-btn:hover{background:#8ae600;color:#050506;border-color:#8ae600}
-.tier-card .tier-specs div{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:13px;color:var(--text-2);padding:9px 0 7px;border-bottom:1px dashed rgba(255,255,255,.05)}
-.tier-card .tier-specs div:last-child{border-bottom:0}
-.tier-card .tier-specs div b{color:var(--text);font-weight:600;background:linear-gradient(90deg,#fff,var(--tier-accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.tier-card.featured{border-color:rgba(118,185,0,.5);border-top:2px solid var(--green);background:linear-gradient(180deg,rgba(118,185,0,.10),rgba(118,185,0,.02) 45%,var(--bg-panel) 80%);box-shadow:0 0 0 1px rgba(118,185,0,.22),0 18px 46px -20px rgba(118,185,0,.45)}
-.tier-card.featured:hover{box-shadow:0 26px 60px -22px rgba(118,185,0,.55),0 0 0 1px rgba(118,185,0,.4) inset}
-.tier-card.mine{border-color:rgba(118,185,0,.6);box-shadow:0 0 0 1px rgba(118,185,0,.4),0 14px 40px -18px rgba(118,185,0,.5)}
-.rec-chip{position:absolute;top:14px;right:14px;font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#050506;background:linear-gradient(135deg,var(--green-bright),var(--green));border-radius:99px;padding:4px 11px;box-shadow:0 4px 14px -4px rgba(118,185,0,.7);animation:chipGlow 2.4s ease-in-out infinite}
-@keyframes chipGlow{0%,100%{box-shadow:0 4px 14px -4px rgba(118,185,0,.7)}50%{box-shadow:0 4px 22px -2px rgba(118,185,0,1)}}
-.tier-note{font-size:13.5px;color:var(--text-3);text-align:center;margin-top:14px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.75}
-.tier-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;font-size:13.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:linear-gradient(135deg,#6C7BFF,#5865F2 55%,#4B54E8);color:#fff;padding:15px 34px;border-radius:12px;min-height:50px;cursor:pointer;line-height:1;white-space:nowrap;position:relative;overflow:hidden;transition:transform .18s var(--ease),box-shadow .3s var(--ease)}
-.tier-cta::after{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.25),transparent);transform:skewX(-18deg);transition:left .6s var(--ease)}
-.tier-cta:hover{transform:translateY(-2px);box-shadow:0 10px 30px -8px rgba(88,101,242,.55)}
-.tier-cta:hover::after{left:130%}
-.tier-cta svg{width:17px;height:17px;flex:0 0 auto}
-/* Discord + Telegram side by side on the tiers page. flex:1 1 0 with the same
-   min/max on both keeps them identical in size, and the max-width means the
-   lone Discord CTA stays roughly its old width once signed in and the Telegram
-   button is hidden. Wraps to stacked on a narrow phone. */
-.tier-cta-row{display:flex;align-items:stretch;justify-content:center;gap:10px;flex-wrap:wrap}
-.tier-cta-row > *{flex:1 1 0;min-width:220px;max-width:270px;margin-top:18px}
-.tier-cta-tg{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#54a9eb;color:#fff;padding:15px 24px;border-radius:12px;min-height:50px;cursor:pointer;line-height:1;white-space:nowrap;border:0;transition:transform .18s var(--ease),box-shadow .3s var(--ease)}
-.tier-cta-tg:hover{transform:translateY(-2px);box-shadow:0 10px 30px -8px rgba(84,169,235,.55)}
-.tier-cta-tg svg{width:17px;height:17px;flex:0 0 auto}
-.tier-cta.active{background:rgba(118,185,0,.1);border:1px solid rgba(118,185,0,.4);color:var(--green);cursor:default;box-shadow:none}
-.compare-table{width:100%;border-collapse:collapse;font-size:15px}
-.compare-table th{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);font-weight:700;padding:14px 16px;text-align:left;border-bottom:1px solid var(--border)}
-.compare-table th.center,.compare-table td.center{text-align:center}
-.compare-table td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-2)}
-.compare-table td b{color:var(--text)}
-.compare-table tr:last-child td{border-bottom:0}
-.compare-table .yes{color:var(--green);font-weight:700}
-.compare-table .no{color:var(--red);font-weight:700}
-.compare-table th.tier-th{font-family:var(--font-display);font-size:25px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
-.compare-table tr.compare-cta td{border-bottom:0;padding:16px 14px 6px}
-.compare-table .compare-cta .tier-btn{font-size:13.5px;padding:10px 12px}
-.table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg-panel);width:100%}
+    const loadStats = () => {
+      api("/api/stats?_t=" + Date.now()).then((r) => {
+        if (r && r.ok) renderStats(r.json);
+        else renderStats(null);
+      });
+    };
+    loadStats();
+    setInterval(loadStats, 15000);
 
-/* ── Compare slider — "See the difference" ────────────────────── */
-.cmp-hero{text-align:center;margin-bottom:22px}
-.cmp-hero h2{font-family:var(--font-display);font-size:clamp(21.5px,3vw,31.5px);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text)}
-.cmp-hero p{color:var(--text-2);font-size:15px;line-height:1.75;margin-top:8px}
-.cmp-stage{position:relative;display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;width:100%}
+    const dt = $("#hero-date");
+    if (dt) dt.textContent = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  }
 
-.phone-frame{position:relative;z-index:1;width:min(100%,360px);margin:0 auto;padding:10px 10px 14px;background:linear-gradient(180deg,#17171D,#101014);border:1px solid var(--border-hi);border-radius:30px;box-shadow:0 30px 70px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03) inset}
-.phone-frame::after{content:"";display:block;width:44px;height:4px;border-radius:99px;background:rgba(255,255,255,.14);margin:10px auto 0}
-.cmp{position:relative;width:auto;max-width:100%;height:min(72vh,560px);aspect-ratio:9/16;margin:0 auto;border:1px solid var(--border-hi);border-radius:var(--r2);overflow:hidden;background:#0A0A0D;cursor:ew-resize;touch-action:none;--pos:50%;user-select:none}
-.cmp-layer{position:absolute;inset:0;overflow:hidden}
-.cmp-layer .scene{position:absolute;inset:0}
-.cmp-b{background:#101016;z-index:1}
-.cmp-a{z-index:2;clip-path:inset(0 calc(100% - var(--pos)) 0 0)}
-.scene{background:radial-gradient(circle at 22% 30%,rgba(118,185,0,.14),transparent 42%),radial-gradient(circle at 74% 66%,rgba(56,189,248,.1),transparent 46%),radial-gradient(circle at 50% 50%,rgba(255,255,255,.06) 0 1.5px,transparent 2px) 0 0/18px 18px,repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 22px),repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 1px,transparent 1px 22px),linear-gradient(160deg,#15151C,#0B0B0F 60%,#101016)}
-.scene::after{content:none}
-.cmp-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;background:#0A0A0D}
-.cmp-video.on{display:block}
-.cmp-a .cmp-video{filter:none}
-.cmp-b .cmp-video{filter:none}
-.cmp-line{position:absolute;top:0;bottom:0;left:var(--pos);width:2px;background:#fff;z-index:3;box-shadow:0 0 10px rgba(255,255,255,.35);transition:box-shadow .3s var(--ease)}
-.cmp.dragging .cmp-line{box-shadow:0 0 16px rgba(255,255,255,.6)}
-.cmp-hand{position:absolute;top:50%;left:var(--pos);transform:translate(-50%,-50%);z-index:4;width:38px;height:38px;border-radius:50%;background:#fff;color:#050506;display:flex;align-items:center;justify-content:center;gap:3px;box-shadow:0 4px 16px rgba(0,0,0,.5),0 0 0 3px rgba(255,255,255,.18);transition:transform .22s var(--ease-spring)}
-.cmp-hand:hover,.cmp.dragging .cmp-hand{transform:translate(-50%,-50%) scale(1.08)}
-.cmp-hand:focus-visible{outline:2px solid var(--green);outline-offset:3px}
-.cmp-hand svg{width:12px;height:12px}
-.cmp-tag{position:absolute;top:11px;z-index:5;font-family:var(--font-mono);font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:5px;padding:3px 6px;white-space:nowrap;animation:fadeSlideUp .4s var(--ease) .4s both;background:rgba(0,0,0,.55)}
-.cmp-tag.a{left:8px;color:#fff;border:1px solid rgba(255,255,255,.14)}
-.cmp-tag.b{right:8px;color:var(--green-bright);border:1px solid rgba(118,185,0,.35)}
-.cmp-caption{text-align:center;font-size:13.5px;color:var(--text-3);margin-top:16px}
-.compare-wrap{margin-top:24px}
+  function renderStats(s) {
+    if (!s) {
+      [["#kpi-patches", "—"], ["#kpi-users", "—"], ["#kpi-today", "—"]].forEach(([sel, v]) => {
+        const n = $(sel); if (n) n.textContent = v;
+      });
+      if ($("#kpi-today-foot")) $("#kpi-today-foot").textContent = "—";
+      if ($("#eng-dot")) $("#eng-dot").classList.remove("off");
+      if ($("#eng-text")) { $("#eng-text").textContent = "ONLINE"; $("#eng-text").style.color = ""; }
+      if ($("#eng-version")) $("#eng-version").textContent = "JOHN_QUALITY ENGINE v2.0";
+      if ($("#eng-uptime")) $("#eng-uptime").textContent = "UPTIME —";
+      if ($("#eng-last")) $("#eng-last").textContent = "LAST OPTIMIZATION —";
+      return;
+    }
+    const kpis = [["#kpi-patches", s.totalPatches], ["#kpi-users", s.totalUsers], ["#kpi-today", s.patchesToday]];
+    kpis.forEach(([sel, v]) => {
+      const node = $(sel);
+      if (!node) return;
+      const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { countUp(node, v, 1300); io.disconnect(); } }), { threshold: 0.3 });
+      io.observe(node);
+    });
+    const weekTotal = (s.daily || []).reduce((a, d) => a + (d.count || 0), 0);
+    if ($("#kpi-today-foot")) $("#kpi-today-foot").textContent = fmt(weekTotal) + " LAST 7 DAYS";
+    if ($("#kpi-users-foot")) {
+      const used = (s.usersUsed != null) ? s.usersUsed : "—";
+      const act = (s.active7d != null) ? s.active7d : "—";
+      $("#kpi-users-foot").textContent = used + " USED TOOLS · " + act + " ACTIVE 7D";
+    }
+    const eng = s.engine || {};
+    if ($("#eng-dot")) $("#eng-dot").classList.remove("off");
+    if ($("#eng-text")) { $("#eng-text").textContent = "ONLINE"; $("#eng-text").style.color = ""; }
+    if ($("#eng-version")) $("#eng-version").textContent = "JOHN_QUALITY ENGINE v2.0";
+    if ($("#eng-uptime")) $("#eng-uptime").textContent = "UPTIME " + (eng.uptime || "—");
+    if ($("#eng-last")) {
+      const t = eng.lastPatchAt || s.lastPatchAt;
+      $("#eng-last").textContent = "LAST OPTIMIZATION " + (t ? timeAgo(t) : "NEVER");
+    }
+  }
 
-/* ── Patcher UI ───────────────────────────────────────────────── */
-.patcher-card{margin-top:24px;background:linear-gradient(170deg,#121218,#0B0B0F);border:1px solid var(--border);border-radius:var(--r2);padding:26px;position:relative;width:100%}
-.drop-zone{border:1.5px dashed var(--border-hi);border-radius:var(--r2);padding:60px 24px;min-height:230px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:border-color .25s var(--ease),background .25s var(--ease)}
-.drop-zone:hover,.drop-zone.drag{border-color:var(--green);background:var(--green-dim)}
-.drop-icon{width:52px;height:52px;margin:0 auto 14px;border-radius:12px;background:var(--green-dim);border:1px solid rgba(118,185,0,.3);display:grid;place-items:center;color:var(--green)}
-.drop-icon svg{width:24px;height:24px}
-.drop-title{font-size:18px;font-weight:600}
-.drop-sub{font-size:15px;line-height:1.75;color:var(--text-3);margin-top:6px}
-.limit-bar{display:flex;align-items:center;gap:12px;margin-top:18px}
-.limit-bar-track{flex:1;height:5px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:99px;overflow:hidden}
-.limit-bar-fill{height:100%;width:0;background:var(--green);border-radius:99px;transition:width .4s var(--ease)}
-.limit-text{font-family:var(--font-mono);font-size:12.5px;color:var(--text-2);white-space:nowrap}
-.scan-view{display:none;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
-.scan-view.show{display:grid}
-.sv-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--bg)}
-.sv-lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);font-weight:700}
-.sv-val{font-family:var(--font-mono);font-size:17px;font-weight:700;margin-top:6px;color:var(--text)}
-.action-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:stretch;justify-content:center}
-.btn{font-size:13.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:14px 24px;min-height:46px;border-radius:10px;display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap;transition:background .2s var(--ease),transform .12s var(--ease),opacity .2s var(--ease),border-color .2s var(--ease)}
-.btn svg{width:15px;height:15px}
-.btn-run{background:var(--green);color:#050506}
-.btn-run:hover{background:var(--green-bright)}
-.btn-run:disabled{opacity:.35;cursor:not-allowed}
-.action-row{align-items:center!important}
-.action-row .chk-opt{min-height:52px;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;align-items:center!important}
-.action-row .btn{min-height:52px}
-.btn-dl{background:var(--green);border:1px solid var(--green);color:#050506}
-.btn-dl:hover{background:var(--green-bright);border-color:var(--green-bright);color:#050506;box-shadow:0 0 18px -4px rgba(118,185,0,.55)}
-.btn-dl:disabled{opacity:.35;cursor:not-allowed}
-.btn-dl.pulse{animation:dlpulse 1.1s ease 3}
-@keyframes dlpulse{0%,100%{box-shadow:0 0 0 0 rgba(118,185,0,0)}50%{box-shadow:0 0 0 8px rgba(118,185,0,.25)}}
-.btn-clear{background:none;color:var(--text-3);border:1px solid var(--border)}
-.btn-clear:hover{color:var(--text);border-color:var(--border-hi)}
-.btn-again{background:var(--bg-elevated);border:1px solid var(--border-hi);color:var(--text)}
-.btn-again:hover{border-color:var(--green);color:var(--green)}
-.usage-row{display:flex;align-items:center;gap:11px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
-.usage-avatar{width:30px;height:30px;border-radius:50%;background:var(--green-dim);border:1px solid rgba(118,185,0,.3);display:grid;place-items:center;color:var(--green);font-family:var(--font-mono);font-size:13.5px;font-weight:700;overflow:hidden}
-.usage-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.usage-label{font-size:14.5px;line-height:1.65;color:var(--text-2)}
-.usage-label b{color:var(--text);font-weight:600}
-.patch-login{text-align:center;padding:46px 20px;border:1.5px dashed var(--border-hi);border-radius:var(--r2)}
-.patch-login .lock{width:46px;height:46px;margin:0 auto 13px;border-radius:13px;background:var(--green-dim);border:1px solid rgba(118,185,0,.3);display:grid;place-items:center;color:var(--green)}
-.patch-login .lock svg{width:20px;height:20px}
-.patch-login h3{font-size:17px;font-weight:600}
-.patch-login p{font-size:15px;line-height:1.75;color:var(--text-3);margin-top:6px;max-width:380px;margin-left:auto;margin-right:auto}
-.proc-progress{padding:34px 20px;text-align:center}
-.proc-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
-.proc-pct{font-family:var(--font-mono);font-size:clamp(38px,6vw,47px);font-weight:700;color:var(--green);letter-spacing:-.02em}
-.proc-stage{font-size:14.5px;color:var(--text-2);margin-top:9px}
-.proc-status{font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);margin-top:10px}
-.progress-track{height:7px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:99px;overflow:hidden}
-.progress-fill{height:100%;width:0;background:var(--green);border-radius:99px;transition:width .3s var(--ease)}
+  function renderTier(t, username, me) {
+    if ($("#tier-user")) $("#tier-user").textContent = username || "USER";
+    if ($("#tier-name2")) $("#tier-name2").textContent = "PREMIUM";
+    if ($("#tier-mb")) $("#tier-mb").textContent = "Unlimited";
+    if ($("#tier-res")) $("#tier-res").textContent = "4K";
+    if ($("#tier-fps")) $("#tier-fps").textContent = "120 FPS";
+    const pbText = $("#pb-text"), pbSub = $("#pb-sub"), pbFill = $("#pb-fill");
+    if (pbText && pbSub && pbFill) {
+      pbText.textContent = "Unlimited";
+      pbSub.textContent = "All features unlocked";
+      pbFill.style.setProperty("--w", "100%");
+    }
+  }
 
-/* ── TikTok Analyzer (tt-*) ──────────────────────────────────── */
-.tt-engine-label{display:flex;align-items:center;gap:8px;margin-bottom:16px}
-.tt-engine-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulseDot 2.4s ease-in-out infinite}
-.tt-engine-name{font-size:13.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-2)}
-.tt-engine-ver{font-family:var(--font-mono);font-size:11.5px;color:var(--text-3);border:1px solid var(--border);border-radius:99px;padding:2px 8px}
-.tt-input-row{display:flex;gap:10px;align-items:stretch;width:100%}
-.tt-input-wrap{flex:1;min-width:0}
-.tt-input{width:100%;min-width:0;max-width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border-hi);border-radius:11px;color:var(--text);font-size:15px;padding:13px 15px;transition:border-color .2s var(--ease)}
-.tt-input::placeholder{color:var(--text-3)}
-.tt-input:focus{outline:none;border-color:var(--green)}
-.btn-tt-analyze{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:11px;background:var(--green);color:#050506;font-size:13.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;min-height:46px;width:150px;flex:0 0 auto;transition:background .2s var(--ease),transform .12s var(--ease);white-space:nowrap}
-.btn-tt-analyze:hover{background:var(--green-bright)}
-.btn-tt-analyze:disabled{opacity:.55;cursor:not-allowed}
-.tt-loading{display:none;padding:40px;text-align:center}
-.tt-loading.show{display:block}
-.tt-spinner{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.08);border-top-color:var(--green);animation:spin .7s linear infinite;margin:0 auto 12px}
-.tt-loading-text{font-size:15px;color:var(--text-3)}
-.tt-error{display:none;padding:13px;border-radius:11px;background:rgba(229,72,77,.07);border:1px solid rgba(229,72,77,.18);font-size:15px;color:var(--red);margin-top:14px}
-.tt-error.show{display:block;animation:fadeSlideUp .3s var(--ease)}
-.tt-result{display:none;animation:fadeSlideUp .46s var(--ease)}
-.tt-result.show{display:block;margin-top:20px;width:100%}
-.tt-profile-row{display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:14px 16px;border-radius:var(--r2);background:var(--bg-panel);border:1px solid var(--border);transition:border-color .22s var(--ease)}
-.tt-profile-row:hover{border-color:var(--border-hi)}
-.tt-thumb{width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid var(--border-hi);background:var(--bg-elevated);flex-shrink:0}
-.tt-author-info{flex:1;min-width:0}
-.tt-author-name{font-size:17px;font-weight:700;color:var(--text)}
-.tt-author-handle{font-size:13.5px;color:var(--text-3);margin-top:2px}
-.tt-verified{font-size:11.5px;font-weight:600;color:var(--text-2);background:var(--green-dim);border:1px solid rgba(118,185,0,.3);padding:2px 8px;border-radius:99px;display:inline-flex;align-items:center;gap:4px}
-.tt-account-badge{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:99px}
-.tt-account-badge.public{background:var(--green-dim);color:var(--green);border:1px solid rgba(118,185,0,.25)}
-.tt-account-badge.private{background:rgba(229,72,77,.07);color:var(--red);border:1px solid rgba(229,72,77,.18)}
-.tt-meta-row{display:flex;gap:16px;margin-bottom:16px;font-size:13.5px;color:var(--text-3);flex-wrap:wrap}
-.tt-meta-item{display:flex;align-items:center;gap:5px}
-.tt-title-box{padding:12px 14px;border-radius:var(--r);background:var(--bg-panel);border:1px solid var(--border);margin-bottom:16px}
-.tt-title-text{font-size:15px;color:var(--text-2);line-height:1.7}
-.tt-hashtags{font-size:13.5px;color:var(--green);margin-top:6px;font-weight:600}
-.tt-categories{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
-.tt-cat-chip{font-size:11.5px;font-weight:700;color:#0b0f14;background:var(--accent, #4ade80);padding:3px 10px;border-radius:999px;letter-spacing:.3px}
-.tt-tech-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.tt-tech{padding:10px 12px;border-radius:var(--r);background:var(--bg-panel);border:1px solid var(--border);transition:border-color .2s var(--ease),transform .2s var(--ease)}
-.tt-tech:hover{border-color:var(--border-hi);transform:translateY(-1px)}
-.tt-tech-lbl{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);font-weight:700}
-.tt-tech-val{font-size:14.5px;color:var(--text);margin-top:5px}
-.tt-video-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border-radius:var(--r2);font-size:15px;font-weight:700;color:#050506;background:var(--green);width:100%;margin-top:16px;transition:background .2s var(--ease),transform .2s var(--ease)}
-.tt-video-btn:hover{background:var(--green-bright);transform:translateY(-2px)}
-.tt-video-btn svg{width:14px;height:14px}
-.an-note{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin-bottom:14px;display:flex;align-items:center;gap:7px}
-.an-note::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--amber);animation:pulseDot 2.4s ease-in-out infinite}
-.an-note.live{color:var(--green)}
-.an-note.live::before{background:var(--green)}
+  function timeAgo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return s + "S AGO";
+    if (s < 3600) return Math.floor(s / 60) + "M AGO";
+    if (s < 86400) return Math.floor(s / 3600) + "H AGO";
+    return Math.floor(s / 86400) + "D AGO";
+  }
 
-/* ── Admin ────────────────────────────────────────────────────── */
-.admin-box{max-width:420px;margin:40px auto;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r2);padding:26px;text-align:center;width:100%;box-sizing:border-box}
-.admin-box h2{font-family:var(--font-display);font-size:20.5px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
-.admin-box p{font-size:13.5px;color:var(--text-3);margin-bottom:18px}
-.admin-error{font-family:var(--font-mono);font-size:12.5px;color:var(--red);margin-top:10px;min-height:14px}
-.admin-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px;flex-wrap:wrap;width:100%}
-.admin-toolbar .count{font-family:var(--font-mono);font-size:12.5px;color:var(--text-3);letter-spacing:.08em;text-transform:uppercase}
-.admin-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg-panel);margin-top:14px;width:100%}
-.admin-table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:640px}
-.admin-table th{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);font-weight:700;padding:13px 15px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
-.admin-table td{padding:12px 15px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:middle}
-.admin-table tr:last-child td{border-bottom:0}
-.admin-table tr:hover td{background:rgba(255,255,255,.02)}
-.admin-table .dim{color:var(--text-3);font-size:12px}
-.admin-table select{background:var(--bg);border:1px solid var(--border-hi);border-radius:7px;color:var(--text);font-family:var(--font-mono);font-size:13.5px;padding:6px 9px;cursor:pointer}
-.admin-table select:focus{outline:none;border-color:var(--green)}
-.btn-xs{padding:7px 11px;font-size:12px;border-radius:7px}
-.input-field{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border-hi);border-radius:10px;color:var(--text);font-size:15px;padding:12px 15px;transition:border-color .2s var(--ease);min-width:0;max-width:100%;box-sizing:border-box}
-.input-field::placeholder{color:var(--text-3)}
-.input-field:focus{outline:none;border-color:var(--green)}
-.input-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:stretch}
+  /* ── Compare slider ────────────────────────────────────────── */
+  function initCompare(cmp) {
+    const handle = $("#cmp-hand");
+    const setPos = (p) => { p = Math.max(0, Math.min(100, p)); cmp.style.setProperty("--pos", p + "%"); if (handle) handle.setAttribute("aria-valuenow", Math.round(p)); };
+    const move = (e) => { const r = cmp.getBoundingClientRect(); setPos(((e.clientX - r.left) / r.width) * 100); };
+    let dragging = false;
+    cmp.addEventListener("pointerdown", (e) => { dragging = true; cmp.classList.add("dragging"); cmp.setPointerCapture(e.pointerId); move(e); });
+    cmp.addEventListener("pointermove", (e) => { if (dragging) move(e); });
+    ["pointerup", "pointercancel"].forEach((ev) => cmp.addEventListener(ev, () => { dragging = false; cmp.classList.remove("dragging"); }));
+    if (handle) handle.addEventListener("keydown", (e) => {
+      const cur = parseFloat(cmp.style.getPropertyValue("--pos")) || 50;
+      if (e.key === "ArrowLeft") setPos(cur - 2);
+      if (e.key === "ArrowRight") setPos(cur + 2);
+    });
+  }
 
-/* ── Bottom nav (mobile) ──────────────────────────────────────── */
-.bottom-nav{display:none;position:fixed;top:auto;right:0;bottom:0;left:0;width:100%;max-width:none;height:72px;margin:0;padding:6px 8px env(safe-area-inset-bottom);border:0;border-top:1px solid var(--border);border-radius:0;z-index:100;background:rgba(10,10,13,.92);backdrop-filter:blur(20px) saturate(1.4);justify-content:space-around;align-items:center;gap:2px;transform:none;animation:none}
-.bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:9.5px;letter-spacing:.01em;text-transform:uppercase;color:var(--text-3);padding:8px 1px;min-height:56px;flex:1;min-width:0;border-radius:10px;transition:color .2s var(--ease)}
-.bn-item svg{width:21px;height:21px;flex:none}
-.bn-item span{max-width:100%;text-align:center;line-height:1.15}
-.bn-item.active{color:var(--green)}
-.bn-item.active svg{color:var(--green)}
-.bn-item:hover{color:var(--text)}
+  function initCompareVideo() {
+    const va = $("#vid-a"), vb = $("#vid-b");
+    if (!va || !vb) return;
+    const hq = (window.RTX && window.RTX.VIDEO_HQ) || "";
+    const lq = (window.RTX && window.RTX.VIDEO_LQ) || "";
+    if (!hq || !lq) return;
+    function fail(v) { v.classList.remove("on"); }
+    va.preload = "auto"; vb.preload = "auto";
+    va.src = lq; vb.src = hq;
+    va.classList.add("on"); vb.classList.add("on");
+    va.addEventListener("error", () => fail(va));
+    vb.addEventListener("error", () => fail(vb));
+    let started = false;
+    function tryStart() {
+      if (started || va.readyState < 1 || vb.readyState < 1) return;
+      started = true;
+      try { va.currentTime = 0; vb.currentTime = 0; } catch (e) {}
+      va.play().catch(() => {});
+      vb.play().catch(() => {});
+      requestAnimationFrame(tick);
+    }
+    va.addEventListener("loadedmetadata", tryStart);
+    vb.addEventListener("loadedmetadata", tryStart);
+    function tick() {
+      const dt = va.currentTime - vb.currentTime;
+      if (Math.abs(dt) > 0.12) {
+        if (dt > 0) {
+          if (vb.paused && !vb.ended) va.pause();
+          else vb.currentTime = va.currentTime;
+        } else {
+          if (va.paused && !va.ended) vb.pause();
+          else va.currentTime = vb.currentTime;
+        }
+      } else {
+        if (va.paused && !vb.paused && !va.ended) va.play().catch(() => {});
+        if (vb.paused && !va.paused && !vb.ended) vb.play().catch(() => {});
+      }
+      requestAnimationFrame(tick);
+    }
+  }
 
-/* ── Footer ───────────────────────────────────────────────────── */
-footer{border-top:1px solid var(--border);margin-top:60px;padding:26px 0 34px;text-align:center}
-.footer-logo{font-family:var(--font-display);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:15.5px;display:flex;align-items:center;justify-content:center;gap:8px}
-.footer-glyph{width:14px;height:14px;border-radius:4px;object-fit:cover;vertical-align:-1px}
-.footer-sub{font-size:12.5px;color:var(--text-3);margin-top:8px}
+  /* ── Video metadata scan ───────────────────────────────────── */
+  function readVideoMeta(file) {
+    return new Promise((resolve) => {
+      let settled = false;
+      let codec = "";
+      let elMeta = null;
+      const finish = (m) => { if (!settled) { settled = true; resolve(m); } };
+      (async () => {
+        try {
+          const head = new Uint8Array(await file.slice(0, SCAN_HEAD).arrayBuffer());
+          const has = (b, t) => {
+            const c0 = t.charCodeAt(0), c1 = t.charCodeAt(1), c2 = t.charCodeAt(2), c3 = t.charCodeAt(3);
+            for (let i = 0; i + 4 <= b.length; i++) {
+              if (b[i] !== c0 || b[i + 1] !== c1 || b[i + 2] !== c2 || b[i + 3] !== c3) continue;
+              return true;
+            }
+            return false;
+          };
+          if (has(head, "hvc1") || has(head, "hev1")) codec = "hevc";
+          else if (has(head, "avc1")) codec = "avc1";
+          if (!codec && file.size > SCAN_HEAD) {
+            const tail = new Uint8Array(await file.slice(Math.max(0, file.size - SCAN_TAIL), file.size).arrayBuffer());
+            if (has(tail, "hvc1") || has(tail, "hev1")) codec = "hevc";
+            else if (has(tail, "avc1")) codec = "avc1";
+          }
+        } catch (e) {}
+      })();
 
-/* ── Footer (base rules, must come BEFORE media queries) ──────── */
-.site-footer{border-top:1px solid var(--border);padding:40px 0 24px;margin-top:20px;text-align:left}
-.footer-cols{display:grid;max-width:1100px;margin:0 auto;align-items:start}
-.footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
-.footer-brand-logo{width:38px;height:38px;border-radius:9px;object-fit:cover;margin-bottom:5px}
-.footer-brand-name{font-family:var(--font-display);font-size:17px;font-weight:800;letter-spacing:.1em;color:var(--text)}
-.footer-brand p{margin:0;color:var(--text-2);font-size:13.5px;line-height:1.65}
-/* Flatten the Community+Socials wrapper so all 5 sections are direct, equal-width grid columns */
-.footer-cols-2{display:contents}
-.footer-col h4{color:var(--text-3);font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
-.footer-col a{display:block;color:var(--text-2);font-size:15px;padding:4px 0;text-decoration:none;overflow-wrap:break-word}
-.footer-col a:hover{color:var(--green)}
-.footer-brand,.footer-col{min-width:0;overflow-wrap:break-word}
-.footer-bottom{border-top:1px solid var(--border);margin-top:28px;padding-top:16px;text-align:center;color:var(--text-3);font-size:13.5px}
-/* SEO keyword section: hidden from visitors but kept in HTML source for search engines */
-.footer-seo{border-top:1px solid var(--border);margin:28px auto 0;padding:20px 20px 0;max-width:1100px;display:none!important}
-.footer-seo h4{color:var(--text-3);font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0 0 12px}
-.footer-seo-tags{display:flex;flex-wrap:wrap;gap:8px}
-.footer-seo-tags a{color:var(--text-2);font-size:13px;text-decoration:none;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:999px;padding:4px 12px;transition:color .15s ease,border-color .15s ease}
-.footer-seo-tags a:hover{color:var(--green);border-color:var(--green)}
-.footer-engine{color:var(--green)}
+      const url = URL.createObjectURL(file);
+      const vid = document.createElement("video");
+      vid.preload = "metadata";
+      vid.src = url;
+      const dropUrl = () => { try { URL.revokeObjectURL(url); } catch (e) {} };
+      vid.onloadedmetadata = () => {
+        const w = vid.videoWidth, h = vid.videoHeight;
+        const dur = Number.isFinite(vid.duration) && vid.duration > 0 ? vid.duration : 0;
+        if (w > 0 && h > 0) elMeta = { w, h, dur, fps: 0, codec };
+        dropUrl();
+      };
+      vid.onerror = () => { dropUrl(); };
 
-/* ── Responsive ───────────────────────────────────────────────── */
-@media(min-width:1200px){.container{max-width:1120px}}
-@media(max-width:900px){
-  .kpi-grid{grid-template-columns:repeat(2,1fr)}
-  .tier-grid{grid-template-columns:1fr}
-  .an-grid{grid-template-columns:repeat(2,1fr)}
-  .scan-view{grid-template-columns:repeat(2,1fr)}
-  .page-hero h1{font-size:34px}
-}
-/* Footer: true desktops — all 5 sections in one row */
-@media(min-width:1101px){
-  .footer-cols{grid-template-columns:minmax(0,1.5fr) repeat(4,minmax(0,1fr));gap:40px;padding:0 20px}
-}
-/* Footer: tablets, phones & phone-landscape — 2 columns, Community/Socials on top row */
-@media(max-width:1100px){
-  .footer-cols{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;padding:0 20px}
-  .footer-brand{grid-column:1/-1}
-  /* Order: Brand → [Community | Socials] → [Product | Guides] */
-  .footer-cols > .footer-brand{order:1}
-  .footer-cols-2 > .footer-col:nth-child(1){order:2}
-  .footer-cols-2 > .footer-col:nth-child(2){order:3}
-  .footer-cols > .footer-col:nth-child(2){order:4}
-  .footer-cols > .footer-col:nth-child(3){order:5}
-}
-@media(max-width:700px){
-  nav.top-nav,.top-nav{display:none}
-  .bottom-nav{display:flex}
-  body{padding-bottom:60px}
-  .page{padding-top:22px}
-  .page-hero{padding-top:12px}
-  main.container{padding-left:16px;padding-right:16px}
-  .patcher-card{padding:18px}
-  .tt-input-row{flex-direction:column}
-  .btn-tt-analyze{width:100%}
-  .admin-toolbar{align-items:stretch}
-  .admin-toolbar>div{width:100%}
-  .admin-toolbar .btn{flex:1;justify-content:center}
-  /* Footer stays 2 columns on phones too; just tighten spacing */
-  .footer-cols{gap:28px;padding:0 24px}
-  .footer-col h4{margin-bottom:10px}
-  /* Phones: the pair used to wrap and then stretch to the full content width,
-     which read as two wide bars. Fixed width instead, centred, still stacked so
-     the labels fit without shrinking the text. */
-  .login-choices{flex-direction:column;align-items:stretch;gap:9px;width:280px;max-width:100%;margin:0 auto}
-  .login-choices .btn{flex:0 0 auto;min-width:0}
-}
-@media(max-width:600px){
-  .kpi-grid{grid-template-columns:1fr 1fr}
-  .page-hero h1{font-size:28.5px}
-  .tier-banner{padding:15px}
-  .patch-bar{width:100%}
-  .cmp-tag{font-size:9px;padding:3px 5px;top:10px}
-  .cmp-tag.a{left:6px}.cmp-tag.b{right:6px}
-  .usage-pill{display:none}
-  .heat-grid{grid-template-columns:repeat(4,1fr)}
-  .tt-tech-row{grid-template-columns:repeat(2,1fr)}
-  .tt-profile-row{gap:11px;padding:12px}
-  .tt-thumb{width:44px;height:44px}
-  .tt-meta-row{gap:8px 12px;font-size:13px}
-}
-@media(max-width:480px){
-  .kpi-grid{grid-template-columns:1fr}
-  .scan-view{grid-template-columns:1fr 1fr}
-  .action-row{flex-direction:column}
-  .action-row .btn{width:100%;justify-content:center}
-  .cmp-hero h2{font-size:25px}
-  .cmp-hero p{font-size:13.5px}
-  .phone-frame{width:min(100%,300px);border-radius:24px;padding:7px 7px 10px}
-  .proc-pct{font-size:39px}
-  .page-hero{padding-top:14px}
-  .tool-tab{flex:1;text-align:center;padding:10px 6px}
-  .tier-cta{width:100%;justify-content:center}
-  .cmp-caption{font-size:12.5px}
-  .tt-engine-label{margin-bottom:13px}
-  .tt-result .sv-item{padding:9px 11px}
-}
-@media(max-width:420px){
-  .page-hero h1{font-size:29.5px}
-  .patcher-card{padding:14px}
-  .tt-tech-row{gap:8px}
-  .tt-tech{padding:9px 10px}
-  .tt-tech-val{font-size:13px}
-}
-@media(hover:none){
-  .card:hover,.tier-card:hover{transform:none}
-}
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
-  .js .reveal{opacity:1;transform:none}
-}
+      const safety = setTimeout(() => finish(elMeta), 12000);
 
-/* ── Login-required modal (patcher) ───────────────────────────── */
-.modal-backdrop{position:fixed;inset:0;z-index:200;background:rgba(5,5,6,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeSlideUp .25s var(--ease)}
-.modal{background:var(--bg-panel);border:1px solid var(--border-hi);border-radius:var(--r2);padding:30px 26px;max-width:380px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6)}
-.modal-lock{width:46px;height:46px;margin:0 auto 14px;border-radius:13px;background:var(--green-dim);border:1px solid rgba(118,185,0,.3);display:grid;place-items:center;color:var(--green)}
-.modal-lock svg{width:20px;height:20px}
-.modal h3{font-size:17.5px;font-weight:600}
-.modal p{font-size:14.5px;color:var(--text-3);margin:8px 0 20px;line-height:1.75}
-.modal .btn-discord{width:100%;justify-content:center}
-.modal .btn-clear{width:100%;margin-top:8px}
+      parseMP4Boxes(file).then((m) => {
+        clearTimeout(safety);
+        if (m && (m.w > 0 || m.fps > 0 || m.dur > 0)) {
+          if (!(m.dur > 0) && elMeta && elMeta.dur > 0) m.dur = elMeta.dur;
+          if (!(m.w > 0) && elMeta) { m.w = elMeta.w; m.h = elMeta.h; }
+          finish({ w: m.w, h: m.h, dur: m.dur, fps: m.fps, codec });
+        } else {
+          finish(elMeta);
+        }
+      });
+    });
+  }
 
-/* FAQ */
-.faq{margin-top:48px;padding-bottom:40px}
-.faq-item{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:var(--bg-elevated);overflow:hidden}
-.faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;background:none;border:none;color:var(--text);font-size:17.5px;font-weight:600;text-align:left;cursor:pointer;letter-spacing:0;text-transform:none;line-height:1.65}
-.faq-caret{color:var(--text-3);font-size:15px;transition:transform .2s}
-.faq-item.open .faq-caret{transform:rotate(180deg)}
-.faq-a{display:none;padding:2px 20px 22px;color:var(--text-2);font-size:17px;line-height:2}
-.faq-item.open .faq-a{display:block}
-.faq-support{margin-top:20px;text-align:center;color:var(--text-2);font-size:15px}
-.faq-support-link{color:var(--green);font-weight:600}
+  const SCAN_HEAD = 1024 * 1024;
+  const SCAN_TAIL = 1024 * 1024;
 
-.kpi-sub{font-size:11.5px;color:var(--text-3);margin-top:2px}
+  async function parseMP4Boxes(file) {
+    const u32 = (b, o) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;
+    const t4 = (b, o) => String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
+    const boxList = (b, start, end) => {
+      const out = [];
+      let p = start;
+      while (p + 8 <= end) {
+        let sz = u32(b, p), hs = 8;
+        if (sz === 1) { if (p + 16 > end) break; sz = u32(b, p + 12); hs = 16; }
+        if (sz === 0) sz = end - p;
+        if (sz < hs || p + sz > end) break;
+        out.push({ t: t4(b, p + 4), s: p + hs, e: p + sz });
+        p += sz;
+      }
+      return out;
+    };
+    const findBox = (list, t) => list.find((x) => x.t === t);
+    const scanBox = (b, type) => {
+      const c0 = type.charCodeAt(0), c1 = type.charCodeAt(1), c2 = type.charCodeAt(2), c3 = type.charCodeAt(3);
+      for (let i = 4; i + 4 <= b.length; i++) {
+        if (b[i] !== c0 || b[i + 1] !== c1 || b[i + 2] !== c2 || b[i + 3] !== c3) continue;
+        const sz = u32(b, i - 4);
+        if (sz >= 8 && i - 4 + sz <= b.length) return i - 4;
+      }
+      return -1;
+    };
 
+    const head = new Uint8Array(await file.slice(0, SCAN_HEAD).arrayBuffer());
+    if (head.length < 8) return null;
+    const meta = { w: 0, h: 0, fps: 0, dur: 0 };
 
+    const extract = (b) => {
+      const moovStart = scanBox(b, "moov");
+      if (moovStart < 0) return false;
+      const moovBoxes = boxList(b, moovStart + 8, b.length);
+      for (const trak of moovBoxes.filter((x) => x.t === "trak")) {
+        const tb = boxList(b, trak.s, trak.e);
+        const mdia = findBox(tb, "mdia");
+        if (!mdia) continue;
+        const mb = boxList(b, mdia.s, mdia.e);
+        const minf = findBox(mb, "minf");
+        if (!minf) continue;
+        const minfb = boxList(b, minf.s, minf.e);
+        if (!findBox(minfb, "vmhd")) continue;
+        const tkhd = findBox(tb, "tkhd");
+        if (tkhd) {
+          const ver = b[tkhd.s];
+          const wOff = tkhd.s + (ver === 1 ? 88 : 76);
+          if (wOff + 8 <= b.length) { meta.w = u32(b, wOff) >>> 16; meta.h = u32(b, wOff + 4) >>> 16; }
+        }
+        const mdhd = findBox(mb, "mdhd");
+        const stbl = findBox(minfb, "stbl");
+        if (mdhd && stbl) {
+          const ver = b[mdhd.s];
+          const ts = u32(b, mdhd.s + (ver === 1 ? 20 : 12));
+          if (ts > 0) {
+            if (ver === 1) {
+              const hi = u32(b, mdhd.s + 24), lo = u32(b, mdhd.s + 28);
+              meta.dur = (hi * 4294967296 + lo) / ts;
+            } else {
+              meta.dur = u32(b, mdhd.s + 16) / ts;
+            }
+            const stts = findBox(boxList(b, stbl.s, stbl.e), "stts");
+            if (stts && stts.s + 16 <= b.length) {
+              const count = u32(b, stts.s + 4);
+              if (count > 0) {
+                const base = stts.s + 8;
+                const max = Math.min(count, Math.floor((b.length - base) / 8));
+                let sumF = 0, sumT = 0;
+                for (let i = 0; i < max; i++) {
+                  const c2 = u32(b, base + i * 8);
+                  const d2 = u32(b, base + i * 8 + 4);
+                  sumF += c2;
+                  sumT += c2 * d2;
+                }
+                const f = sumT > 0 ? sumF / (sumT / ts) : 0;
+                if (f >= 1 && f <= 240) meta.fps = Math.round(f);
+              }
+            }
+          }
+        }
+        break;
+      }
+      return meta.w > 0 || meta.fps > 0 || meta.dur > 0;
+    };
 
-/* Patcher log terminal (inside the processing view) */
-.proc-log{min-height:120px;max-height:200px;overflow-y:auto;margin-top:16px;padding:12px 14px;border-radius:10px;background:#0a0a0c;border:1px solid var(--border);font-family:var(--font-mono);font-size:12.5px;line-height:2;text-align:left}
-.log-line{color:#66666c;animation:logIn .22s ease both}
-@keyframes logIn{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
-.log-line.hi{color:#64d2ff}.log-line.pur{color:#d1d1d6}.log-line.ok{color:#30d158}.log-line.err{color:#ff6961}.log-line.warn{color:#ffd60a}
+    if (extract(head)) return meta;
+    if (file.size > SCAN_HEAD) {
+      const tail = new Uint8Array(await file.slice(Math.max(0, file.size - SCAN_TAIL), file.size).arrayBuffer());
+      if (extract(tail)) return meta;
+    }
+    return null;
+  }
 
+  /* ── Console log ────────────────────────────────────────────── */
+  function procLog(msg, cls) {
+    const log = $("#procLog");
+    if (!log) return;
+    const line = document.createElement("div");
+    line.className = "log-line" + (cls ? " " + cls : "");
+    line.textContent = "> " + msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
 
-/* ── SPA views ─────────────────────────────────────────────── */
-.view{display:none}
-.view.active{display:block;animation:viewFade .25s ease}
-@keyframes viewFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  function fmtBytes(n) {
+    if (n >= 1073741824) return (n / 1073741824).toFixed(2) + " GB";
+    if (n >= 1048576) return (n / 1048576).toFixed(1) + " MB";
+    if (n >= 1024) return (n / 1024).toFixed(0) + " KB";
+    return n + " B";
+  }
 
-/* ── Login view (was login.html) ───────────────────────────── */
-.login-card{max-width:380px;width:90%;margin:60px auto;background:var(--bg-elevated);border:1px solid var(--border);border-radius:14px;padding:34px 40px;text-align:center}
-.login-card h1{font-size:23px;margin-bottom:10px;color:var(--text)}
-.login-card p{font-size:16px;color:var(--text-2);margin-bottom:22px;line-height:1.65}
-.login-card .btn{display:inline-block;background:#5865f2;color:#fff;text-decoration:none;font-weight:600;font-size:17px;padding:12px 26px;border-radius:10px;width:100%}
-.login-card .btn:hover{background:#4752c4}
-/* Sign-in choices: both buttons are our own elements sharing this one rule, so
-   they are identical in length, width and height. 238x40 is the box the Telegram
-   widget fallback occupies (data-size="large" iframe), kept so the fallback comes
-   out the same size. Scoped to .login-choice (set by showLoginChoice in
-   shared.js) so the Telegram join screen keeps its own full-width button. */
-.login-card.login-choice .btn{display:inline-flex;align-items:center;justify-content:center;width:238px;height:40px;min-height:40px;padding:0;font-size:15px;letter-spacing:.04em;border-radius:10px;white-space:nowrap}
-/* display:flex/inline-flex would beat the hidden attribute, so re-hide explicitly:
-   these two are toggled when the stock Telegram widget fallback takes over. */
-.login-card.login-choice .btn[hidden],.login-card.login-choice .login-tg-slot[hidden]{display:none}
-/* Telegram's own login-button blue, taken from telegram.org's widget-frame.css
-   (button.tgme_widget_login_button{background-color:#54a9eb}) so this button and
-   the stock-widget fallback are the exact same blue. Discord keeps #5865f2. */
-.login-card.login-choice #tg-login-go{background:#54a9eb;margin-bottom:10px}
-.login-card.login-choice #tg-login-go:hover{background:#3f96dc}
-.login-card.login-choice .login-tg-slot{display:flex;align-items:center;justify-content:center;height:40px;margin:0 auto 14px}
-.login-card.login-choice .login-tg-slot iframe{display:block;width:238px;height:40px;border:0;overflow:hidden;background:transparent}
-@media(max-width:430px){.login-card{padding:26px 18px}}
+  function rtxNewJobKey() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    return String(Date.now()) + "-" + Math.random().toString(36).slice(2);
+  }
 
-/* ── Payment badges (footer) ──────────────────────────────────── */
-.footer-payments{border-top:1px solid var(--border);max-width:1100px;margin:28px auto 0;padding:22px 0 0;text-align:center}
-.footer-payments h4{color:var(--text-3);font-size:12.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px}
-.pay-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
-.pay-badge{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 12px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.14),0 5px 12px rgba(0,0,0,.09);white-space:nowrap;font-family:var(--font);font-weight:700;font-size:13px;letter-spacing:.01em;color:#1a1a1a;user-select:none}
-.pay-badge svg{display:block;flex:none}
-.pay-badge img.pv-img{display:block;height:20px;width:auto;max-width:92px;flex:none}
-.pay-badge b{font-weight:700;line-height:1}
-.pv-visa{font-style:italic;font-weight:800;color:#1A1F71;font-size:14.5px;letter-spacing:.02em}
-.pv-paypal{font-style:italic;font-weight:800;font-size:14px}
-.pv-paypal .c1{color:#003087}
-.pv-paypal .c2{color:#009CDE}
-.pv-revolut{font-weight:800;font-size:13.5px;color:#0a0a0a}
-@media(max-width:520px){.pay-badge{height:28px;padding:0 10px;font-size:12px;gap:5px}.pv-visa{font-size:13px}.pv-paypal{font-size:12.5px}.pay-badge img.pv-img{height:17px;max-width:80px}}
+  /* ═══════════════════════════════════════════════════════════════
+     PATCHER
+     ═══════════════════════════════════════════════════════════════ */
+  function initPatcher() {
+    const input = $("#fileInput"), zone = $("#dropZone"), runBtn = $("#runBtn"), dlBtn = $("#dlBtn"), clearBtn = $("#clearBtn");
+    const againBtn = $("#againBtn");
+    const AGAIN_LABEL = againBtn ? againBtn.textContent : "";
+    if (!input || !zone) return;
 
-/* ── TEMP optimizer announcement (remove together with #hevc-announce markup) ── */
-.site-announce{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;width:100%;max-width:1000px;margin:0 auto 16px;padding:12px 46px 12px 18px;border-radius:14px;background:#f59e0b;color:#1c1917;font-size:16px;font-weight:600;line-height:1.5;text-align:center;box-sizing:border-box;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-.site-announce .ann-ico{font-size:18px}
-.site-announce b{font-weight:800}
-.site-announce .ann-close{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#1c1917;font-size:19px;cursor:pointer;font-weight:700;padding:6px;line-height:1;border-radius:8px}
-.site-announce .ann-close:hover{background:rgba(0,0,0,.12)}
-@media(min-width:1200px){.site-announce{max-width:1120px}}
-@media(max-width:700px){.site-announce{font-size:14.5px;padding:11px 38px 11px 14px;border-radius:12px}}
+    let file = null, objectUrl = null, timers = [], abortCtrl = null, activeXhr = null, jobKey = "", loggedIn = null, patchedName = "", lastScan = null, lastHealth = "", probeBlocked = "";
+    const UPLOAD_MAX = 45;
+    const DL_FROM = 80;
+    let finalizeTimer = null;
+    let animBand = DL_FROM - 1;
+    let dlFloor = null;
 
-/* Tier CTA for the tier the user already holds. Placed last so it also wins
-   over the donor card's own .tier-btn colour rules. */
-.tier-btn.activated,
-.tier-card[data-tier] .tier-btn.activated {
-  background: rgba(118, 185, 0, 0.14);
-  border-color: rgba(118, 185, 0, 0.55);
-  color: var(--green);
-  cursor: default;
-  pointer-events: none;
-  transform: none;
-}
+    function stopFinalizeAnim() { if (finalizeTimer) { clearInterval(finalizeTimer); finalizeTimer = null; } }
+
+    let _ceil = 0, _ceilHard = 0, _ceilTimer = null, _pinnedAt = 0;
+    function rtxCeil(v) { try { if (typeof v === "number") { if (v > _ceil) _ceil = v; if (v > _ceilHard) _ceilHard = v; } } catch (e) {} }
+    function rtxCeilReset(v) { const n = typeof v === "number" ? v : 0; _ceil = n; _ceilHard = n; _pinnedAt = 0; }
+    function rtxCeilStage(cap) { try { if (typeof cap === "number" && cap > _ceilHard) _ceilHard = cap; } catch (e) {} }
+    function rtxCeilStop() { if (_ceilTimer) { clearInterval(_ceilTimer); _ceilTimer = null; } }
+    function rtxCeilStart() {
+      if (_ceilTimer) return;
+      _ceilTimer = setInterval(function () {
+        try {
+          if (_ceil < _ceilHard) _ceil = Math.min(_ceilHard, _ceil + 0.03);
+          if (_ceil >= _ceilHard && _ceilHard >= 79 && _ceilHard < 96) {
+            if (!_pinnedAt) _pinnedAt = Date.now();
+            else if (Date.now() - _pinnedAt > 4000) _ceil = _ceilHard = Math.min(96, _ceil + 0.02);
+          } else if (_ceil < _ceilHard) { _pinnedAt = 0; }
+          const cur = parseFloat($("#progressFill").style.width) || 0;
+          if (cur >= _ceil - 0.1) return;
+          const next = Math.min(_ceil - 0.05, cur + 0.06);
+          if (!(next > cur)) return;
+          if (next > _barHigh) _barHigh = next;
+          $("#progressFill").style.width = next + "%";
+          $("#progressPct").textContent = next.toFixed(1) + "%";
+        } catch (e) {}
+      }, 60);
+    }
+
+    let _barHigh = 0;
+    function rtxBar(pct, label) {
+      try {
+        let p = Math.max(0, Math.min(100, Math.round(pct)));
+        if (p === 0) _barHigh = 0;
+        if (p < _barHigh) p = _barHigh;
+        _barHigh = p;
+        rtxCeil(p);
+        $("#progressFill").style.width = p + "%";
+        $("#progressPct").textContent = p + "%";
+        if (label) $("#progressStage").textContent = label;
+      } catch (e) {}
+    }
+    function dlProgress(loaded, total) {
+      stopFinalizeAnim();
+      rtxCeilStop();
+      const now = parseFloat($("#progressFill").style.width) || UPLOAD_MAX;
+      if (dlFloor === null) dlFloor = Math.max(UPLOAD_MAX, Math.min(DL_FROM, now));
+      const pct = dlFloor + (loaded / total) * (100 - dlFloor);
+      return Math.max(now, Math.min(100, pct));
+    }
+    function startFinalizeAnim(band) {
+      stopFinalizeAnim();
+      rtxCeilStop();
+      animBand = typeof band === "number" ? band : DL_FROM - 1;
+      if (animBand > DL_FROM - 0.2) animBand = DL_FROM - 0.2;
+      let pct = Math.max(UPLOAD_MAX, parseFloat($("#progressFill").style.width) || UPLOAD_MAX);
+      if (pct >= animBand) pct = Math.max(UPLOAD_MAX, animBand - 0.1);
+      finalizeTimer = setInterval(() => {
+        animBand = Math.min(DL_FROM - 0.2, animBand + 0.035);
+        pct = Math.min(animBand - 0.05, pct + Math.max(0.045, (animBand - pct) * 0.07));
+        if (pct > _barHigh) _barHigh = pct;
+        $("#progressFill").style.width = pct + "%";
+        $("#progressPct").textContent = pct.toFixed(1) + "%";
+      }, 60);
+    }
+
+    /* ── Helpers (previously from rtx-patch-local.js) ────────── */
+    function rtxWantsH264() {
+      const b = document.getElementById("h264Convert");
+      return !!(b && b.checked);
+    }
+    function rtxEngineFfmpeg() {
+      try {
+        return localStorage.getItem("john_quality_engine") === "ffmpeg" ||
+               localStorage.getItem("rtx_engine") === "ffmpeg";
+      } catch (e) { return false; }
+    }
+    function rtxMintToken() {
+      return api("/api/authorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }).then(function (r) {
+        const d = r && r.json;
+        return d && d.ok && d.token ? d.token : null;
+      }).catch(function () { return null; });
+    }
+
+    /* ── Auth check ─────────────────────────────────────────── */
+    loadAuthState().then((user) => {
+      renderAuth(user, false);
+      loggedIn = user ? true : false;
+      if (user) {
+        setUsagePill(user);
+        const lbl = $("#usage-tier-label"), cnt = $("#usage-count"), av = $("#usage-avatar");
+        if (lbl) lbl.textContent = user.username || "User";
+        if (cnt) cnt.textContent = "Unlimited";
+        if (av) {
+          if (user.avatar) av.innerHTML = '<img src="' + esc(user.avatar) + '" alt=""/>';
+          else av.textContent = (user.username || "U")[0].toUpperCase();
+        }
+      }
+    });
+
+    setInterval(() => {
+      if (loggedIn !== true) return;
+      api("/api/me").then((m) => {
+        const me = m && m.json;
+        syncAuthFromMe(me);
+      }).catch(() => {});
+    }, 45000);
+
+    const scan = { size: $("#sv-size"), res: $("#sv-res"), dur: $("#sv-dur"), health: $("#sv-health") };
+
+    function resetTimers() { timers.forEach(clearTimeout); timers = []; }
+    function resetUI() {
+      probeBlocked = "";
+      resetTimers();
+      stopFinalizeAnim();
+      rtxCeilStop();
+      rtxCeilReset(0);
+      const pv = $("#processingView");
+      if (pv) pv.style.display = "none";
+      const dz = $("#dropZoneWrap");
+      if (dz) dz.style.display = "";
+      const sv = $("#scanView");
+      if (sv) sv.classList.remove("show");
+      const pf = $("#progressFill");
+      if (pf) pf.style.width = "0";
+      const pp = $("#progressPct");
+      if (pp) pp.textContent = "0%";
+      _barHigh = 0;
+      dlFloor = null;
+      window.__rtxCounted = false;
+      const ps = $("#progressStage");
+      if (ps) ps.textContent = "Processing…";
+      const prs = $("#procStatus");
+      if (prs) prs.textContent = "JOHN_QUALITY ENGINE v2.0";
+      const cb = $("#cancelBtn");
+      if (cb) cb.style.display = "";
+      const dzc = $("#dropZone");
+      if (dzc) dzc.style.display = "";
+      if (runBtn) { runBtn.style.display = ""; runBtn.disabled = false; }
+      if (dlBtn) { dlBtn.style.display = "none"; dlBtn.disabled = true; }
+      if (clearBtn) clearBtn.style.display = "none";
+      if (againBtn) againBtn.style.display = "none";
+    }
+
+    zone.addEventListener("click", () => {
+      if (loggedIn === false) { signInWithGoogle(); return; }
+      input.click();
+    });
+    input.addEventListener("change", async () => {
+      if (loggedIn === false) { signInWithGoogle(); input.value = ""; return; }
+      if (loggedIn === null) {
+        const user = await loadAuthState();
+        if (!user) { signInWithGoogle(); input.value = ""; return; }
+      }
+      if (input.files[0]) handleFile(input.files[0]);
+    });
+    ["dragenter", "dragover"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add("drag"); }));
+    ["dragleave", "drop"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove("drag"); }));
+    zone.addEventListener("drop", async (e) => {
+      if (loggedIn === false) { signInWithGoogle(); return; }
+      if (loggedIn === null) {
+        const user = await loadAuthState();
+        if (!user) { signInWithGoogle(); return; }
+      }
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+
+    function handleFile(f) {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      file = f;
+      objectUrl = URL.createObjectURL(f);
+      const sizeMB = f.size / (1024 * 1024);
+      if (scan.size) scan.size.textContent = sizeMB.toFixed(1) + " MB";
+      if (scan.res) scan.res.textContent = "SCANNING…";
+      if (scan.dur) scan.dur.textContent = "SCANNING…";
+      if (scan.health) { scan.health.textContent = "SCANNING…"; scan.health.style.color = "var(--text-3)"; }
+      const sv = $("#scanView");
+      if (sv) sv.classList.add("show");
+      probeBlocked = "";
+      if (runBtn) runBtn.disabled = false;
+
+      lastScan = null; lastHealth = "";
+      readVideoMeta(f).then((meta) => {
+        lastScan = meta || null;
+        if (!meta) {
+          if (scan.res) scan.res.textContent = "UNKNOWN";
+          if (scan.dur) scan.dur.textContent = "UNKNOWN";
+          if (scan.health) { scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)"; }
+          lastHealth = "READY TO OPTIMIZE";
+          return;
+        }
+        if (meta.w > 0 && meta.h > 0) {
+          if (scan.res) scan.res.textContent = meta.w + "×" + meta.h + (meta.codec === "hevc" ? " · H265 (HEVC)" : "");
+        } else if (scan.res) scan.res.textContent = "UNKNOWN";
+        if (meta.codec === "hevc") {
+          procLog("H265 (HEVC) detected. Optimising now. Tip: H.264 files are recommended.", "ok");
+        }
+        if (scan.dur) {
+          if (meta.dur > 0) scan.dur.textContent = Math.floor(meta.dur / 60) + ":" + String(Math.floor(meta.dur % 60)).padStart(2, "0");
+          else scan.dur.textContent = "UNKNOWN";
+        }
+        if (scan.health) { scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)"; }
+        lastHealth = "READY TO OPTIMIZE";
+      });
+    }
+
+    function sniffVideoCodec(file) {
+      return new Promise((resolve) => {
+        const markers = { avc1: "h264", avc3: "h264", avc4: "h264", hvc1: "hevc", hev1: "hevc", hev2: "hevc" };
+        const reader = file.stream().getReader();
+        const dec = new TextDecoder("latin1");
+        let tail = "";
+        function done(codec) { try { reader.cancel(); } catch (e) {} resolve(codec); }
+        (function next() {
+          reader.read().then(({ done: fin, value }) => {
+            if (fin) { resolve(null); return; }
+            const s = tail + dec.decode(value, { stream: true });
+            let best = null; let bestIdx = 1e18;
+            for (const m in markers) {
+              const i = s.indexOf(m);
+              if (i !== -1 && i < bestIdx) { bestIdx = i; best = markers[m]; }
+            }
+            if (best) { done(best); return; }
+            tail = s.slice(-8);
+            next();
+          }).catch(() => resolve(null));
+        })();
+      });
+    }
+
+    runBtn.addEventListener("click", async () => {
+      if (loggedIn === false) { signInWithGoogle(); return; }
+      if (loggedIn === null) {
+        const user = await loadAuthState();
+        if (!user) { signInWithGoogle(); return; }
+      }
+      if (!file) { input.click(); return; }
+
+      const _h264Box = document.getElementById("h264Convert");
+      if (_h264Box && _h264Box.checked) {
+        try {
+          const sniffed = await sniffVideoCodec(file);
+          if (sniffed === "h264") {
+            procLog("Your file is H.264 - please untick 'Convert H265 (HEVC) to H.264' and try again.");
+            alert("Your file is H.264 - please untick 'Convert H265 (HEVC) to H.264' and try again.");
+            return;
+          }
+        } catch (e) {}
+      }
+
+      resetTimers();
+      abortCtrl = new AbortController();
+      const myCtrl = abortCtrl;
+      const isDead = () => myCtrl.signal.aborted || myCtrl !== abortCtrl;
+      jobKey = rtxNewJobKey();
+      window.__rtxBusy = true;
+      rtxCeilReset(0);
+      rtxCeilStage(UPLOAD_MAX);
+      rtxCeilStart();
+      activeXhr = null;
+
+      const dz = $("#dropZoneWrap"); if (dz) dz.style.display = "none";
+      const pv = $("#processingView"); if (pv) pv.style.display = "block";
+      const pf = $("#progressFill"); if (pf) pf.style.width = "0";
+      const pp = $("#progressPct"); if (pp) pp.textContent = "0%";
+      _barHigh = 0;
+      dlFloor = null;
+      const ps = $("#progressStage"); if (ps) ps.textContent = "Authorizing…";
+      const prs = $("#procStatus"); if (prs) prs.textContent = "JOHN_QUALITY Engine v2 · CLOUD";
+      if (dlBtn) dlBtn.disabled = true;
+
+      const plog = $("#procLog");
+      if (plog) plog.innerHTML = "";
+      procLog("JOHN_QUALITY — Optimizer v2", "hi");
+      procLog("File: " + file.name + " (" + fmtBytes(file.size) + ")", "pur");
+      procLog("Tier: PREMIUM · Unlimited", "pur");
+      if (lastScan) {
+        procLog(
+          "Scan: " + (lastScan.w > 0 ? lastScan.w + "×" + lastScan.h : "unknown res") +
+          " · " + (lastScan.fps > 0 ? lastScan.fps + " fps" : "fps?") +
+          " · " + (lastScan.dur > 0 ? Math.floor(lastScan.dur / 60) + "m" + Math.floor(lastScan.dur % 60) + "s" : "dur?") +
+          " · " + (lastScan.codec || "?") +
+          " · " + (lastHealth || "—"),
+          "pur"
+        );
+      }
+
+      timers.push(setTimeout(async () => {
+        try {
+          $("#progressStage").textContent = "Authorizing…";
+          const auth = await api("/api/authorize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          });
+          if (isDead()) throw new Error("aborted");
+          if (!auth || !auth.ok || !auth.json || auth.json.ok !== true) {
+            const msg = (auth && auth.json && auth.json.error) || "Authorization failed — try again.";
+            procLog("Blocked: " + msg, "err");
+            $("#procStatus").textContent = "Error";
+            $("#progressStage").textContent = msg;
+            timers.push(setTimeout(() => resetUI(), 5000));
+            return;
+          }
+          const tk = auth.json;
+          $("#progressFill").style.width = "1%";
+          $("#progressPct").textContent = "1%";
+          procLog("Auth: OK [premium]", "ok");
+
+          $("#progressStage").textContent = "Optimizing…";
+          procLog("Connecting to the optimizer service…", "pur");
+
+          const fd = new FormData();
+          fd.append("file", file, file.name);
+          try {
+            if (localStorage.getItem("john_quality_engine") === "ffmpeg") {
+              fd.append("engine", "ffmpeg");
+            }
+          } catch (e) {}
+          if (rtxWantsH264()) {
+            fd.append("h264", "1");
+            procLog("H265 (HEVC) → H.264 conversion requested.", "ok");
+          }
+
+          const xhr = new XMLHttpRequest();
+          activeXhr = xhr;
+          xhr.open("POST", "/api/patch-rtx");
+          xhr.responseType = "blob";
+          xhr.setRequestHeader("X-Patch-Token", tk.token);
+          if (tk.token && tk.token.split(":")[1]) {
+            xhr.setRequestHeader("X-Discord-Id", tk.token.split(":")[1]);
+          }
+          xhr.setRequestHeader("X-Filename", file.name.replace(/[^\x20-\x7E]/g, "_"));
+
+          xhr.upload.onprogress = (ev) => {
+            if (!ev.lengthComputable) return;
+            const pct = Math.min(UPLOAD_MAX, 1 + Math.round((ev.loaded / ev.total) * (UPLOAD_MAX - 1)));
+            $("#progressFill").style.width = pct + "%";
+            $("#progressPct").textContent = Math.round(pct) + "%";
+            $("#progressStage").textContent = "Uploading " + fmtBytes(ev.loaded) + " / " + fmtBytes(ev.total);
+          };
+          xhr.upload.onload = () => {
+            $("#progressStage").textContent = "Optimizing…";
+            startFinalizeAnim();
+          };
+          xhr.onprogress = (ev) => {
+            if (ev.lengthComputable && ev.total > 0) {
+              const pct = dlProgress(ev.loaded, ev.total);
+              $("#progressFill").style.width = pct + "%";
+              $("#progressPct").textContent = pct.toFixed(1) + "%";
+              $("#progressStage").textContent = "Downloading " + fmtBytes(ev.loaded) + " / " + fmtBytes(ev.total);
+            }
+          };
+
+          const blob = await new Promise((resolve, reject) => {
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(xhr.response);
+                return;
+              }
+              const errBody = xhr.response;
+              const err = new Error("Optimization failed (" + xhr.status + ")");
+              err.status = xhr.status;
+              if (errBody instanceof Blob) {
+                errBody.text().then((t) => {
+                  try {
+                    const j = JSON.parse(t);
+                    if (j && j.error) err.message = j.error;
+                  } catch (e) {}
+                  reject(err);
+                }).catch(() => reject(err));
+              } else {
+                reject(err);
+              }
+            };
+            xhr.onerror = () => reject(new Error("Connection to the optimizer was interrupted — try again."));
+            xhr.onabort = () => reject(new Error("aborted"));
+            xhr.send(fd);
+          });
+
+          if (!(blob instanceof Blob)) throw new Error("Empty response from optimizer server.");
+          stopFinalizeAnim();
+
+          $("#progressFill").style.width = "100%";
+          $("#progressPct").textContent = "100%";
+          $("#progressStage").textContent = "Optimization complete.";
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          if (isDead()) throw new Error("aborted");
+
+          window.__rtxBusy = false;
+
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          objectUrl = URL.createObjectURL(blob);
+          try { window.__rtxOutBlob = blob; } catch (e) {}
+          patchedName = "john-quality-optimized-" + Math.random().toString(16).slice(2, 6) + ".mp4";
+
+          $("#dropZoneWrap").style.display = "none";
+          $("#processingView").style.display = "block";
+          $("#cancelBtn").style.display = "none";
+          $("#progressStage").textContent = "Optimization complete. The video has bypassed TikTok compression";
+          $("#procStatus").textContent = "Done — click Download";
+          procLog("Output: " + patchedName + " (" + fmtBytes(blob.size) + ")", "ok");
+
+          window.__rtxDoneAt = Date.now();
+          if (againBtn) { againBtn.style.display = ""; againBtn.textContent = AGAIN_LABEL; }
+          try { dlBtn.style.display = ""; dlBtn.disabled = false; dlBtn.classList.add("pulse"); dlBtn.scrollIntoView({ behavior: "smooth", block: "center" }); }
+          catch (e) {}
+        } catch (e) {
+          stopFinalizeAnim();
+          if (isDead()) {
+            procLog("Optimization cancelled.", "warn");
+            window.__rtxBusy = false;
+            rtxCeilStop();
+            resetUI();
+            return;
+          }
+          if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+          file = null; input.value = ""; patchedName = "";
+          procLog("Error: " + ((e && e.message) || "optimization failed"), "err");
+          $("#procStatus").textContent = "Error";
+          window.__rtxBusy = false;
+          const _rtxErrMsg = (e && e.message) || "optimization failed";
+          $("#progressStage").textContent = _rtxErrMsg + " - try another file";
+          $("#cancelBtn").style.display = "none";
+          dlBtn.style.display = "none"; dlBtn.disabled = true;
+          if (againBtn) { againBtn.textContent = "Try Again"; againBtn.style.display = ""; }
+        }
+      }, 300));
+    });
+
+    $("#cancelBtn").addEventListener("click", () => {
+      if (abortCtrl) abortCtrl.abort();
+      if (activeXhr) activeXhr.abort();
+      window.__rtxBusy = false;
+      rtxCeilStop();
+      resetTimers();
+      $("#procStatus").textContent = "Aborted";
+      $("#progressStage").textContent = "Cancelled";
+      timers.push(setTimeout(() => resetUI(), 800));
+    });
+
+    const _isAppleTouch = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+    const doDownload = () => {
+      const name = patchedName || ("optimized-" + (file ? file.name.replace(/\.[^.]+$/, "") : "video") + ".mp4");
+
+      if (_isAppleTouch) {
+        const ob = window.__rtxOutBlob;
+        if (ob && navigator.canShare) {
+          try {
+            const f = new File([ob], name, { type: ob.type || "video/mp4" });
+            if (navigator.canShare({ files: [f] })) {
+              navigator.share({ files: [f] }).catch(function () {});
+              return;
+            }
+          } catch (e) {}
+        }
+        if (ob && objectUrl) { try { window.open(objectUrl, "_blank"); return; } catch (e) {} }
+        return;
+      }
+
+      if (!objectUrl) return;
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+    };
+    dlBtn.addEventListener("click", doDownload);
+    $("#clearBtn").addEventListener("click", () => { file = null; input.value = ""; resetUI(); });
+    if (againBtn) againBtn.addEventListener("click", () => {
+      if (window.__rtx && typeof window.__rtx.resetForNewRun === "function") {
+        window.__rtx.resetForNewRun();
+      }
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = null; window.__rtxOutBlob = null; file = null; input.value = ""; patchedName = "";
+      resetUI();
+      const drop = $("#dropZoneWrap");
+      if (drop) { drop.style.display = ""; drop.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    });
+    resetUI();
+  }
+
+  /* ── Analytics ─────────────────────────────────────────────── */
+  function initAnalytics() {
+    const input = $("#ttUrlInput"), btn = $("#ttAnalyzeBtn");
+    const loading = $("#ttLoading"), errEl = $("#ttError"), res = $("#ttResult");
+    if (!input || !btn) return;
+
+    function showErr(msg) {
+      loading.classList.remove("show");
+      res.classList.remove("show");
+      errEl.textContent = msg;
+      errEl.classList.add("show");
+    }
+    function setBtn(analyzing) {
+      btn.disabled = analyzing;
+      btn.innerHTML = analyzing
+        ? '<div class="tt-spinner" style="width:14px;height:14px;border-color:rgba(8,8,8,.18);border-top-color:#080808;margin:0;"></div>'
+        : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Analyze';
+    }
+
+    async function analyze() {
+      const url = input.value.trim();
+      if (!url) { showErr("Paste a TikTok URL first."); return; }
+      if (!url.includes("tiktok.com")) { showErr("That doesn't look like a TikTok URL."); return; }
+      setBtn(true);
+      loading.classList.add("show");
+      errEl.classList.remove("show");
+      res.classList.remove("show");
+
+      const r = await api("/api/tiktok", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      loading.classList.remove("show");
+      setBtn(false);
+      if (r && r.ok && r.json) {
+        renderTikTokResult(r.json);
+        return;
+      }
+      showErr((r && r.json && r.json.error) || "Server unreachable.");
+    }
+
+    function renderTikTokResult(d) {
+      const note = $("#ttDemoNote");
+      if (note) note.style.display = "none";
+      const avatar = $("#ttAvatar");
+      if (avatar) { if (d.avatar) { avatar.src = d.avatar; avatar.style.display = ""; } else avatar.style.display = "none"; }
+      const nameEl = $("#ttAuthorName"); if (nameEl) nameEl.textContent = d.nickname || d.author || "—";
+      const handleEl = $("#ttHandle"); if (handleEl) handleEl.textContent = d.author ? "@" + d.author : "—";
+      res.classList.add("show");
+    }
+
+    btn.addEventListener("click", analyze);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") analyze(); });
+  }
+
+  /* ── Admin ─────────────────────────────────────────────────── */
+  let admPage = 1, admPer = 50;
+  function initAdmin() {
+    const form = $("#admin-login-form"), panel = $("#admin-panel");
+    function showPanel() {
+      if (form) form.style.display = "none";
+      if (panel) panel.style.display = "";
+      loadUsers();
+    }
+    async function tryLoadUsers() {
+      const r = await api("/api/admin/users");
+      return !!(r && r.ok);
+    }
+    tryLoadUsers().then((ok) => { if (ok) showPanel(); else if (form) form.style.display = ""; });
+
+    if (form) form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const r = await api("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secret: $("#admin-secret").value }) });
+      if (r && r.ok) {
+        if (r.json && r.json.adminToken) localStorage.setItem("jq_admin", r.json.adminToken);
+        showPanel();
+      } else {
+        const err = $("#admin-error"); if (err) err.textContent = "Invalid admin secret";
+      }
+    });
+    const lo = $("#admin-logout"), rf = $("#admin-refresh");
+    if (lo) lo.addEventListener("click", async () => { localStorage.removeItem("jq_admin"); location.reload(); });
+    if (rf) rf.addEventListener("click", loadUsers);
+  }
+
+  async function loadUsers() {
+    const tbody = $("#admin-tbody");
+    const r = await api("/api/admin/users", { cache: "no-store" });
+    if (!r || !r.ok) { if (tbody) tbody.innerHTML = '<tr><td colspan="5">Not authorized</td></tr>'; return; }
+    const data = r.json || {};
+    const users = Array.isArray(data) ? data : (data.users || []);
+    if ($("#admin-count")) $("#admin-count").textContent = users.length + " users";
+    if (tbody) {
+      tbody.innerHTML = "";
+      users.forEach((u) => {
+        const tr = el("tr", "");
+        tr.appendChild(el("td", "", "<b>" + esc(u.username || u.name || "") + "</b><br><span class='dim'>" + esc(u.email || u.uid || u.discord_id || "") + "</span>"));
+        tr.appendChild(el("td", "mono", String(u.today_patches || 0)));
+        tr.appendChild(el("td", "", esc(u.tier || "premium")));
+        tr.appendChild(el("td", "mono dim", u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"));
+        tr.appendChild(el("td", "", ""));
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  /* ── Tiers page ────────────────────────────────────────────── */
+  function initTiers() {
+    api("/api/me").then((m) => {
+      const { user } = normalizeMe(m && m.json);
+      renderAuth(user, false);
+      if (user && user.tier) {
+        $$('.view[data-view="tiers"] .tier-card').forEach((c) => c.classList.toggle("mine", c.dataset.tier === user.tier.tier));
+      }
+    });
+  }
+
+  /* ── SVG icons ─────────────────────────────────────────────── */
+  const GOOGLE_SVG = '<svg class="dl-logo" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;flex-shrink:0;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>';
+
+  /* ═══════════════════════════════════════════════════════════════
+     FIREBASE AUTH — Google Sign-In
+     ═══════════════════════════════════════════════════════════════ */
+  let _firebaseAuth = null;
+  let _firebaseUser = null;
+  let _firebaseInitTried = false;
+
+  function initFirebaseClient() {
+    if (_firebaseAuth) return _firebaseAuth;
+    if (_firebaseInitTried) return null;
+    _firebaseInitTried = true;
+
+    if (!window.firebase || !window.RTX || !window.RTX.FIREBASE) {
+      console.warn("[JOHN_QUALITY] Firebase SDK or config missing.");
+      return null;
+    }
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(window.RTX.FIREBASE);
+      _firebaseAuth = firebase.auth();
+      try { _firebaseAuth.useDeviceLanguage(); } catch (e) {}
+      _firebaseAuth.onAuthStateChanged((u) => {
+        _firebaseUser = u;
+        if (u) {
+          u.getIdToken().then((idToken) => {
+            fetch("/api/auth/google", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken }),
+            })
+              .then((r) => r.json())
+              .then((d) => {
+                if (d.ok && d.sessionToken) {
+                  localStorage.setItem("jq_session", d.sessionToken);
+                  AUTH_USER = {
+                    username: d.user.name,
+                    display_name: d.user.name,
+                    avatar: d.user.picture,
+                    tier: { tier: "donor", tierLabel: "Premium", tierMB: 0, tierRes: "4K120", tierFPS: 120 },
+                  };
+                  AUTH_ME_RAW = d.user;
+                  AUTH_RESOLVED = true;
+                  renderAuth(AUTH_USER, false);
+                }
+              })
+              .catch(() => {});
+          });
+        }
+      });
+      return _firebaseAuth;
+    } catch (e) {
+      console.error("[JOHN_QUALITY] Firebase init failed:", e);
+      return null;
+    }
+  }
+
+  function signInWithGoogle() {
+    const auth = initFirebaseClient();
+    if (!auth) {
+      alert("Firebase is not configured. Check site-config.js.");
+      return;
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    auth.signInWithPopup(provider).catch((e) => {
+      if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") {
+        alert("Sign-in failed: " + e.message);
+      }
+    });
+  }
+
+  async function signOutGoogle() {
+    try { if (_firebaseAuth) await _firebaseAuth.signOut(); } catch (e) {}
+    localStorage.removeItem("jq_session");
+    try { await fetch("/api/auth/logout", { method: "POST" }); } catch (e) {}
+    AUTH_USER = null;
+    AUTH_RESOLVED = true;
+    AUTH_STATE = null;
+    renderAuth(null, false);
+    location.reload();
+  }
+
+  /* ── Router ────────────────────────────────────────────────── */
+  const VIEWS = ["dashboard", "patcher", "analytics", "tiers", "howto", "admin", "login"];
+  const INIT = {};
+
+  function currentView() {
+    const h = (location.hash || "").replace(/^#\/?/, "").split("?")[0].split("/")[0];
+    if (h && VIEWS.includes(h)) return h;
+    const p = (location.pathname || "/").replace(/^\/+/, "").split("/")[0];
+    return VIEWS.includes(p) ? p : "dashboard";
+  }
+  function pathFor(view) { return view === "dashboard" ? "/" : "/" + view; }
+  function isRouteHref(href) {
+    if (!href || /^(https?:)?\/\//.test(href) || href.startsWith("/api/") || href.startsWith("#")) return false;
+    const seg = href.replace(/^\/+/, "").split(/[?#]/)[0].split("/")[0];
+    return href === "/" || VIEWS.includes(seg);
+  }
+
+  document.addEventListener("click", (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest("a[href]");
+    if (!a || a.target === "_blank") return;
+    const href = a.getAttribute("href");
+    if (!isRouteHref(href)) return;
+    const view = href === "/" ? "dashboard" : href.replace(/^\/+/, "").split(/[?#]/)[0].split("/")[0];
+    a.href = pathFor(view);
+  });
+
+  function showView(name) {
+    if (!VIEWS.includes(name)) name = "dashboard";
+    $$(".view").forEach((v) => v.classList.toggle("active", v.dataset.view === name));
+    $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === name));
+    document.body.dataset.page = name;
+
+    if (!INIT[name]) {
+      INIT[name] = true;
+      if (name === "dashboard") initDashboard();
+      if (name === "patcher") initPatcher();
+      if (name === "analytics") initAnalytics();
+      if (name === "admin") initAdmin();
+      if (name === "tiers") initTiers();
+      if (name === "login") initLoginView();
+    }
+    initReveal();
+    window.scrollTo(0, 0);
+  }
+
+  function initLoginView() {
+    api("/api/me").then((m) => {
+      const { user } = normalizeMe(m && m.json);
+      if (user) { location.replace("/"); return; }
+      const card = document.querySelector(".login-card");
+      if (!card) return;
+      const gBtn = card.querySelector("#google-signin-btn");
+      if (gBtn) gBtn.onclick = signInWithGoogle;
+      initFirebaseClient();
+    });
+  }
+
+  window.addEventListener("popstate", () => showView(currentView()));
+
+  /* ── Auth state ────────────────────────────────────────────── */
+  let AUTH_STATE = null;
+  let AUTH_USER = null;
+  let AUTH_ME_RAW = null;
+  let AUTH_RESOLVED = false;
+  const AUTH_LS_KEY = "johnquality:last";
+
+  function readCachedAuth() {
+    try { const raw = localStorage.getItem(AUTH_LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  }
+  function writeCachedAuth(user) {
+    try {
+      if (user) localStorage.setItem(AUTH_LS_KEY, JSON.stringify(user));
+      else localStorage.removeItem(AUTH_LS_KEY);
+    } catch {}
+  }
+  function clearCachedAuth() { writeCachedAuth(null); }
+
+  function applyAuthState(user, devMode) {
+    AUTH_USER = user;
+    renderAuth(user, devMode);
+  }
+
+  function loadAuthState() {
+    if (AUTH_STATE) return AUTH_STATE;
+
+    if (!AUTH_USER) {
+      const c = readCachedAuth();
+      if (c) applyAuthState(c, false);
+    }
+
+    const auth = initFirebaseClient();
+
+    const stored = localStorage.getItem("jq_session");
+    if (stored) {
+      try {
+        const payload = JSON.parse(atob(stored.split(".")[1]));
+        if (payload && payload.exp * 1000 > Date.now()) {
+          const u = {
+            username: payload.name || "User",
+            display_name: payload.name || "User",
+            avatar: payload.picture || null,
+            tier: { tier: "donor", tierLabel: "Premium", tierMB: 0, tierRes: "4K120", tierFPS: 120 },
+          };
+          AUTH_USER = u;
+          AUTH_ME_RAW = payload;
+          AUTH_RESOLVED = true;
+          AUTH_STATE = Promise.resolve(u);
+          renderAuth(u, false);
+          return AUTH_STATE;
+        }
+      } catch (e) {}
+    }
+
+    AUTH_RESOLVED = true;
+    AUTH_STATE = Promise.resolve(null);
+    renderAuth(null, false);
+    return AUTH_STATE;
+  }
+
+  function syncAuthFromMe(json) {
+    const { user } = normalizeMe(json);
+    const next = (user && user.tier && user.tier.tier) || null;
+    const prev = (AUTH_USER && AUTH_USER.tier && AUTH_USER.tier.tier) || null;
+    if (next !== prev) applyAuthState(user, false);
+    return user;
+  }
+
+  /* ── Best upload times ─────────────────────────────────────── */
+  function initBestTimes() {
+    const btn = document.getElementById("btCheckBtn");
+    if (!btn) return;
+    const input = document.getElementById("btUsername");
+    const loading = document.getElementById("btLoading");
+    const err = document.getElementById("btError");
+    const out = document.getElementById("btResult");
+    const showErr = (m) => { if (err) { err.textContent = m; err.style.display = "block"; } };
+    const run = async () => {
+      const u = ((input && input.value) || "").trim().replace(/^@/, "");
+      if (!u) { showErr("Enter a TikTok username first."); return; }
+      if (err) { err.style.display = "none"; err.textContent = ""; }
+      if (out) out.style.display = "none";
+      if (loading) loading.style.display = "flex";
+      try {
+        const r = await fetch("/api/besttime", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u }),
+        });
+        const d = await r.json();
+        if (loading) loading.style.display = "none";
+        if (!d || d.error) { showErr((d && d.error) || "Couldn't look up that profile."); return; }
+        if (!d.has_data) { showErr("Not enough public videos yet."); return; }
+        renderBestTimes(d);
+      } catch (e) {
+        if (loading) loading.style.display = "none";
+        showErr("Something went wrong — please try again.");
+      }
+    };
+    btn.addEventListener("click", run);
+    if (input) input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); run(); } });
+  }
+
+  function renderBestTimes(d) {
+    const out = document.getElementById("btResult");
+    if (!out) return;
+    const win = d.windows || [];
+    const conf = d.confident ? "high confidence" : "low confidence";
+    let html = '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px">Based on '
+      + (d.sample_size || 0) + " recent video" + ((d.sample_size === 1) ? "" : "s")
+      + " · " + conf + "</div>";
+    win.forEach((w) => {
+      const pct = Math.min(100, Math.max(5, Number(w.avg_engagement_rate) * 4));
+      html += '<div style="margin-bottom:12px">'
+        + '<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:5px">'
+        + "<span>" + esc(w.label) + "</span>"
+        + '<span style="font-weight:700;white-space:nowrap">' + w.avg_engagement_rate + "%</span>"
+        + "</div>"
+        + '<div style="height:7px;border-radius:4px;background:rgba(255,255,255,.08)">'
+        + '<div style="height:7px;border-radius:4px;width:' + pct + '%;background:var(--purple,#8b5cf6)"></div>'
+        + "</div></div>";
+    });
+    out.innerHTML = html;
+    out.style.display = "block";
+  }
+
+  /* ── Boot ──────────────────────────────────────────────────── */
+  function boot() {
+    try { sessionStorage.removeItem("jqcache:/api/me"); } catch {}
+    initReveal();
+    initBestTimes();
+
+    initFirebaseClient();
+    loadAuthState();
+
+    const gBtn = document.getElementById("google-signin-btn");
+    if (gBtn) gBtn.onclick = signInWithGoogle;
+
+    const v = window.__VIEW__ || currentView();
+    if (location.hash) {
+      try { history.replaceState({}, "", pathFor(v) + (location.search || "")); } catch {}
+    }
+    showView(v);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   Payment badges (footer)
+   ═══════════════════════════════════════════════════════════════ */
+(function () {
+  "use strict";
+  var G = {
+    google: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>',
+    crypto: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="overflow:visible"><path d="M16 8a6 6 0 1 0 0 8" stroke="#F7931A" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M10 4v4M13 4v4M10 16v4M13 16v4" stroke="#F7931A" stroke-width="2" stroke-linecap="round"/></svg>',
+    bank: '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M12 2.5 2 8.5h20L12 2.5z" fill="#1a1a1a"/><rect x="6.5" y="10.5" width="2.2" height="7" fill="#1a1a1a"/><rect x="10.9" y="10.5" width="2.2" height="7" fill="#1a1a1a"/><rect x="15.3" y="10.5" width="2.2" height="7" fill="#1a1a1a"/><rect x="3.5" y="17.5" width="17" height="2.6" rx="0.8" fill="#1a1a1a"/></svg>'
+  };
+  var IMG = "assets/payments/";
+  var BADGES = [
+    ["Visa", '<span class="pv-visa">VISA</span>'],
+    ["Mastercard", '<img class="pv-img" src="' + IMG + 'mastercard.jpg" alt="Mastercard">'],
+    ["PayPal", '<span class="pv-paypal"><b class="c1">Pay</b><b class="c2">Pal</b></span>'],
+    ["Apple Pay", '<img class="pv-img" src="' + IMG + 'apple-pay.jpg" alt="Apple Pay">'],
+    ["Google Pay", G.google + "<b>Pay</b>"],
+    ["Amazon Pay", '<img class="pv-img" src="' + IMG + 'amazon-pay.jpg" alt="Amazon Pay">'],
+    ["Crypto", G.crypto + "<b>CRYPTO</b>"],
+    ["Revolut", '<b class="pv-revolut">Revolut</b>'],
+    ["Wise", '<img class="pv-img" src="' + IMG + 'wise.jpg" alt="Wise">'],
+    ["Remitly", '<img class="pv-img" src="' + IMG + 'remitly.jpg" alt="Remitly">'],
+    ["Bank transfer", G.bank + "<b>Bank transfer</b>"]
+  ];
+  function injectPayments() {
+    var footer = document.querySelector(".site-footer");
+    if (!footer || document.querySelector(".footer-payments")) return;
+    var box = document.createElement("div");
+    box.className = "footer-payments";
+    var h = document.createElement("h4");
+    h.textContent = "We accept";
+    var row = document.createElement("div");
+    row.className = "pay-badges";
+    BADGES.forEach(function (b) {
+      var s = document.createElement("span");
+      s.className = "pay-badge";
+      s.title = b[0];
+      s.setAttribute("aria-label", b[0]);
+      s.innerHTML = b[1];
+      row.appendChild(s);
+    });
+    box.appendChild(h);
+    box.appendChild(row);
+    var bottom = footer.querySelector(".footer-bottom");
+    footer.insertBefore(box, bottom);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", injectPayments);
+  else injectPayments();
+})();
+
+/* ── Giveaway countdown ─────────────────────────────────────── */
+(function () {
+  const start = () => {
+    const els = Array.from(document.querySelectorAll("[data-giveaway-ends]"));
+    if (!els.length) return;
+    const pad = (n) => (n < 10 ? "0" : "") + n;
+    const paint = () => {
+      const now = Date.now();
+      els.forEach((el) => {
+        const secs = Math.floor((Date.parse(el.getAttribute("data-giveaway-ends")) - now) / 1000);
+        if (!Number.isFinite(secs) || secs <= 0) { el.textContent = "ended"; return; }
+        el.textContent = pad(Math.floor(secs / 3600)) + ":" +
+                         pad(Math.floor((secs % 3600) / 60)) + ":" + pad(secs % 60);
+      });
+    };
+    paint();
+    setInterval(paint, 1000);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
+})();
