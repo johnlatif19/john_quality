@@ -2,7 +2,7 @@
   "name": "john-quality-backend",
   "version": "2.0.0",
   "private": true,
-  "description": "JOHN_QUALITY — Video Optimizer backend (no-login, unlimited)",
+  "description": "JOHN_QUALITY — Video Optimizer backend (Cloudinary + no-login + unlimited)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,6 +12,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "cloudinary": "^2.5.1",
+    "dotenv": "^16.4.5"
   }
 }
