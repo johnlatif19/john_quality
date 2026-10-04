@@ -1,33 +1,16 @@
 {
   "version": 2,
   "name": "john-quality",
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
-    },
-    {
-      "src": "**/*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "**/*.{js,css,svg,png,jpg,jpeg,ico,webp,woff,woff2,ttf}",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/server.js" },
-    { "src": "/(.*)", "dest": "/$1" }
-  ],
   "functions": {
     "server.js": {
       "maxDuration": 60,
       "memory": 1024
     }
   },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/server.js" },
+    { "source": "/(.*)", "destination": "/server.js" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
