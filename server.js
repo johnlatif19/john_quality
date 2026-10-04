@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    JOHN_QUALITY — Backend server
-   Railway + multer + Cloudinary + Firebase
+   Railway + multer + Cloudinary + Firebase + FFmpeg
    ═══════════════════════════════════════════════════════════════ */
 
 "use strict";
@@ -14,6 +14,12 @@ const jwt = require("jsonwebtoken");
 const { v2: cloudinary } = require("cloudinary");
 const admin = require("firebase-admin");
 const multer = require("multer");
+const { execFile } = require("child_process");
+const { promisify } = require("util");
+const fs = require("fs");
+const os = require("os");
+
+const execFileAsync = promisify(execFile);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +32,7 @@ const UPLOAD_TTL_MS  = 60 * 60 * 1000;
 const SECRET         = process.env.JQ_SECRET || "john_quality_default_secret_change_me";
 const ADMIN_SECRET   = process.env.ADMIN_SECRET || "admin_change_me";
 const CF_FOLDER      = process.env.CLOUDINARY_FOLDER || "john_quality";
+const ENCODER_TAG    = "JOHN_QUALITY - https://www.johnquality.xyz/ - v2.0";
 
 /* ── Firebase Admin init ────────────────────────────────────── */
 let firebaseReady = false;
@@ -71,20 +78,15 @@ const upload = multer({
 });
 
 /* ── In-memory stores ───────────────────────────────────────── */
-const uploads = new Map();
 const jobs = new Map();
 const jobLog = [];
 
 setInterval(() => {
   const now = Date.now();
-  for (const [id, u] of uploads) if (u.expiresAt < now) uploads.delete(id);
-  for (const [id, j] of jobs)    if (j.expiresAt < now) jobs.delete(id);
+  for (const [id, j] of jobs) if (j.expiresAt < now) jobs.delete(id);
 }, 60_000);
 
 /* ── Middleware ─────────────────────────────────────────────── */
-// NOTE: no global express.json() — endpoints that need JSON will parse it themselves.
-// This avoids conflicts with multipart form-data handled by multer.
-
 app.use((req, res, next) => {
   const origin = req.headers.origin || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
@@ -162,6 +164,16 @@ app.get("/api/health", (req, res) => {
     firebase: firebaseReady,
     cloudinary: cloudinaryReady(),
   });
+});
+
+/* ── FFmpeg check (debug) ───────────────────────────────────── */
+app.get("/api/ffmpeg-check", async (req, res) => {
+  try {
+    const { stdout } = await execFileAsync("ffmpeg", ["-version"]);
+    res.json({ ok: true, version: stdout.split("\n")[0] });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
 });
 
 /* ═══════════════════════════════════════════════════════════════
@@ -386,13 +398,12 @@ app.post("/api/patch-rtx", requireToken, upload.single("file"), async (req, res)
   }
   const raw = req.file.buffer;
   const filename = String(req.file.originalname || req.headers["x-filename"] || "input.mp4");
-  const wantsH264 = req.body && (req.body.h264 === "1" || req.headers["x-convert-h264"] === "1");
 
-  console.log(`[patch-rtx] Received ${filename} (${(raw.length / 1048576).toFixed(2)} MB), h264=${wantsH264}`);
+  console.log(`[patch-rtx] Received ${filename} (${(raw.length / 1048576).toFixed(2)} MB)`);
 
   try {
-    // 1) Patch the MP4 (box-level metadata patch, in-memory)
-    const patched = patchMp4(raw);
+    // 1) Patch the MP4 with FFmpeg (remux + metadata)
+    const patched = await patchMp4(raw);
     console.log(`[patch-rtx] Patched to ${(patched.length / 1048576).toFixed(2)} MB`);
 
     // 2) Try to upload the result to Cloudinary (non-fatal if it fails)
@@ -426,113 +437,43 @@ app.post("/api/patch-rtx", requireToken, upload.single("file"), async (req, res)
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   MP4 PATCHER
+   MP4 PATCHER — FFmpeg-based (safe, player-compatible)
    ═══════════════════════════════════════════════════════════════ */
-const ENCODER_TAG = "JOHN_QUALITY - https://www.johnquality.xyz/ - v2.0";
-const CONTAINERS = new Set(["moov", "trak", "mdia", "minf", "stbl"]);
+async function patchMp4(raw) {
+  const tmpDir = os.tmpdir();
+  const id = crypto.randomBytes(8).toString("hex");
+  const inPath = path.join(tmpDir, "jq_in_" + id + ".mp4");
+  const outPath = path.join(tmpDir, "jq_out_" + id + ".mp4");
 
-function patchMp4(raw) {
-  const top = scanTopBoxes(raw);
-  if (!top.length) throw new Error("Not a valid MP4.");
-  const moov = top.find((b) => b.name === "moov");
-  if (!moov) throw new Error("No 'moov' box found.");
-  const moovBody = raw.subarray(moov.offset + moov.headerLen, moov.offset + moov.size);
-  const boxes = parseBoxes(moovBody);
-  const traks = findBoxes(boxes, "trak");
-  const videoTrak = traks.find((t) => handlerOf(t) === "vide");
-  const audioTrak = traks.find((t) => handlerOf(t) === "soun");
-  if (!videoTrak) throw new Error("No video track found.");
-  if (!audioTrak) throw new Error("No audio track found.");
-  applyWatermark(boxes, videoTrak);
-  const mvhd = findBoxes(boxes, "mvhd")[0];
-  if (mvhd && mvhd.data) mvhd.data = setDurationUnknown(mvhd.data);
-  audioTrak.children = audioTrak.children.filter((c) => c.name !== "edts");
-  const newMoovBody = buildBoxes(boxes);
-  const newMoovHeader = Buffer.alloc(8);
-  newMoovHeader.writeUInt32BE(newMoovBody.length + 8, 0);
-  newMoovHeader.write("moov", 4, "latin1");
-  const before = raw.subarray(0, moov.offset);
-  const after = raw.subarray(moov.offset + moov.size);
-  return Buffer.concat([before, newMoovHeader, newMoovBody, after]);
-}
+  try {
+    fs.writeFileSync(inPath, raw);
 
-function readU32(b, o) { return b.readUInt32BE(o); }
-function readName(b, o) { return b.toString("latin1", o + 4, o + 8); }
-function scanTopBoxes(raw) {
-  const out = []; let i = 0;
-  while (i + 8 <= raw.length) {
-    let size = readU32(raw, i); const name = readName(raw, i); let hl = 8;
-    if (size === 1) { if (i + 16 > raw.length) break; size = Number(raw.readBigUInt64BE(i + 8)); hl = 16; }
-    else if (size === 0) size = raw.length - i;
-    if (size < hl || i + size > raw.length) break;
-    out.push({ name, offset: i, size, headerLen: hl }); i += size;
+    // Remux + metadata, no re-encode (stream copy). Safe and fast.
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-fflags", "+genpts",
+      "-err_detect", "ignore_err",
+      "-i", inPath,
+      "-c", "copy",
+      "-map", "0",
+      "-movflags", "+faststart",
+      "-metadata", "encoder=" + ENCODER_TAG,
+      "-metadata", "comment=Optimized by JOHN_QUALITY",
+      outPath,
+    ], { timeout: 120000, maxBuffer: 200 * 1024 * 1024 });
+
+    const patched = fs.readFileSync(outPath);
+    if (!patched || patched.length < 1024) {
+      throw new Error("ffmpeg produced an empty output");
+    }
+    return patched;
+  } catch (e) {
+    console.error("[patchMp4] ffmpeg failed:", e.message);
+    throw new Error("Video optimization failed: " + (e.message || "unknown error"));
+  } finally {
+    try { fs.unlinkSync(inPath); } catch (e) {}
+    try { fs.unlinkSync(outPath); } catch (e) {}
   }
-  return out;
-}
-function parseBoxes(data) {
-  const boxes = []; let i = 0;
-  while (i + 8 <= data.length) {
-    let size = readU32(data, i); const name = readName(data, i); let hl = 8;
-    if (size === 1) { if (i + 16 > data.length) break; size = Number(data.readBigUInt64BE(i + 8)); hl = 16; }
-    else if (size === 0) size = data.length - i;
-    if (size < hl || i + size > data.length) break;
-    const body = data.subarray(i + hl, i + size);
-    if (CONTAINERS.has(name)) boxes.push({ name, children: parseBoxes(body), data: null });
-    else boxes.push({ name, children: [], data: Buffer.from(body) });
-    i += size;
-  }
-  return boxes;
-}
-function buildBoxes(boxes) {
-  const chunks = [];
-  for (const b of boxes) {
-    const body = b.children.length ? buildBoxes(b.children) : b.data || Buffer.alloc(0);
-    const h = Buffer.alloc(8);
-    h.writeUInt32BE(body.length + 8, 0); h.write(b.name, 4, "latin1");
-    chunks.push(h, body);
-  }
-  return Buffer.concat(chunks);
-}
-function findBoxes(boxes, name) {
-  const out = [];
-  for (const b of boxes) { if (b.name === name) out.push(b); if (b.children.length) out.push(...findBoxes(b.children, name)); }
-  return out;
-}
-function handlerOf(trak) {
-  const h = findBoxes(trak.children || [], "hdlr")[0];
-  return (h && h.data && h.data.length >= 12) ? h.data.toString("latin1", 8, 12) : null;
-}
-function setDurationUnknown(data) {
-  if (!data || data.length < 4) return data;
-  const v = data[0];
-  if (v === 0 && data.length >= 100) {
-    const out = Buffer.alloc(data.length + 12); out[0] = 1;
-    data.copy(out, 1, 1, 4); data.copy(out, 8, 4, 8); data.copy(out, 16, 8, 12); data.copy(out, 20, 12, 16);
-    for (let j = 0; j < 8; j++) out[24 + j] = 0xFF;
-    data.copy(out, 32, 20); return out;
-  }
-  if (v === 1 && data.length >= 112) {
-    const out = Buffer.from(data);
-    for (let j = 0; j < 8; j++) out[24 + j] = 0xFF;
-    return out;
-  }
-  return data;
-}
-function applyWatermark(moovBoxes, videoTrak) {
-  for (let i = moovBoxes.length - 1; i >= 0; i--) if (moovBoxes[i].name === "udta") moovBoxes.splice(i, 1);
-  const tagBytes = Buffer.from(ENCODER_TAG, "utf8");
-  const dp = Buffer.alloc(8 + tagBytes.length + 1);
-  dp.writeUInt32BE(1, 0); dp.writeUInt32BE(0, 4); tagBytes.copy(dp, 8);
-  const atom = (n, p) => { const h = Buffer.alloc(8); h.writeUInt32BE(p.length + 8, 0); h.write(n, 4, "latin1"); return Buffer.concat([h, p]); };
-  const dataBox = atom("data", dp);
-  const ctooBox = atom("\xA9too", dataBox);
-  const ilstBox = atom("ilst", ctooBox);
-  const hdlrP = Buffer.alloc(25); hdlrP.write("mdir", 8, "latin1");
-  const hdlrBox = atom("hdlr", hdlrP);
-  const metaBox = atom("meta", Buffer.concat([Buffer.alloc(4), hdlrBox, ilstBox]));
-  const idx = videoTrak.children.findIndex((c) => c.name === "udta");
-  const udta = { name: "udta", children: [], data: metaBox };
-  if (idx >= 0) videoTrak.children[idx] = udta; else videoTrak.children.push(udta);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -622,12 +563,17 @@ if (require.main === module || process.env.VERCEL !== "1") {
     console.log("╔══════════════════════════════════════════════╗");
     console.log("║     JOHN_QUALITY Backend v2.0                ║");
     console.log("║     Railway · Google · Firestore · Cloudinary ║");
+    console.log("║     FFmpeg-based patcher                     ║");
     console.log("╚══════════════════════════════════════════════╝");
     console.log(`  Port         : ${PORT}`);
     console.log(`  Public URL   : ${PUBLIC_BASE}`);
     console.log(`  Firebase     : ${firebaseReady ? "✓" : "✗"}`);
     console.log(`  Cloudinary   : ${cloudinaryReady() ? "✓" : "✗"}`);
     console.log("");
+    // Verify ffmpeg is available
+    execFileAsync("ffmpeg", ["-version"])
+      .then((r) => console.log("  FFmpeg       : ✓ " + r.stdout.split("\n")[0]))
+      .catch(() => console.warn("  FFmpeg       : ✗ NOT FOUND — install it in nixpacks.toml"));
   });
 }
 
