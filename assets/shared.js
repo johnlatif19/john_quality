@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    JOHN_QUALITY — shared.js · all pages
-   Google Sign-In (Firebase) · Unlimited · No Discord/Telegram
+   Google Sign-In (Firebase) · Unlimited · Server-side patching
    ═══════════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
@@ -19,14 +19,6 @@
 
   /* JOHN_QUALITY: ALL TIERS UNLIMITED */
   const TIER_MAP = { member: ["Free", 0, "4K120", 120], booster: ["Booster", 0, "4K120", 120], donor: ["Premium", 0, "4K120", 120] };
-  const PREMIUM_MAX_MB = 999999;
-  const CF_ONE_SHOT_MAX = 90 * 1024 * 1024;
-  const PATCH_LIMIT = { member: null, booster: null, donor: null };
-  const TIER_RES = {
-    member:  { resLong: 99999, resShort: 99999, maxFPS: 9999 },
-    booster: { resLong: 99999, resShort: 99999, maxFPS: 9999, hiFPS: 9999, hiResLong: 99999, hiResShort: 99999 },
-    donor:   { resLong: 99999, resShort: 99999, maxFPS: 9999 },
-  };
 
   function normalizeMe(j) {
     if (!j) return { user: null, admin: false };
@@ -51,7 +43,7 @@
     };
   }
 
-  /* ── Session cache ─────────────────────────────────────────── */
+  /* ── API helpers ──────────────────────────────────────────── */
   const GET_CACHE = { "/api/stats": 60e3, "/api/health": 120e3 };
   function cacheRead(k) {
     try { const raw = sessionStorage.getItem("jqcache:" + k); if (!raw) return null; return JSON.parse(raw); }
@@ -71,7 +63,6 @@
     const cacheable = method === "GET" && !(opts && opts.cache === "no-store") && GET_CACHE[path];
     if (cacheable) { const hit = cacheHit(path); if (hit) return hit; }
     try {
-      // Always send the session JWT if we have one
       opts = opts || {};
       opts.headers = opts.headers || {};
       const sess = localStorage.getItem("jq_session");
@@ -94,7 +85,7 @@
     }
   }
 
-  /* ── Shared UI ─────────────────────────────────────────────── */
+  /* ── UI helpers ────────────────────────────────────────────── */
   function initReveal() {
     const els = $$(".reveal");
     if (!("IntersectionObserver" in window)) return els.forEach((e) => e.classList.add("in"));
@@ -479,24 +470,6 @@
     log.appendChild(line);
     log.scrollTop = log.scrollHeight;
   }
-  function procLogDl(msg) {
-    const log = $("#procLog");
-    if (!log) return;
-    const kids = log.children;
-    let line = null;
-    for (let i = kids.length - 1; i >= 0; i--) {
-      const k = kids[i];
-      if (k && k.dataset && k.dataset.dl === "1") { line = k; break; }
-    }
-    if (!line) {
-      line = document.createElement("div");
-      line.className = "log-line hi";
-      line.dataset.dl = "1";
-      log.appendChild(line);
-    }
-    line.textContent = "> " + msg;
-    log.scrollTop = log.scrollHeight;
-  }
 
   function fmtBytes(n) {
     if (n >= 1073741824) return (n / 1073741824).toFixed(2) + " GB";
@@ -511,7 +484,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     PATCHER
+     PATCHER — Server-side only
      ═══════════════════════════════════════════════════════════════ */
   function initPatcher() {
     const input = $("#fileInput"), zone = $("#dropZone"), runBtn = $("#runBtn"), dlBtn = $("#dlBtn"), clearBtn = $("#clearBtn");
@@ -519,13 +492,13 @@
     const AGAIN_LABEL = againBtn ? againBtn.textContent : "";
     if (!input || !zone) return;
 
-    let file = null, objectUrl = null, timers = [], abortCtrl = null, activeXhr = null, jobKey = "", limitMB = 0, tierLabel = "PREMIUM", apiLive = true, devMode = false, loggedIn = null, patchedName = "", tierKey = "donor", discordId = "", lastScan = null, lastHealth = "", probeBlocked = "";
+    let file = null, objectUrl = null, timers = [], abortCtrl = null, activeXhr = null, jobKey = "", loggedIn = null, patchedName = "", lastScan = null, lastHealth = "", probeBlocked = "";
     const UPLOAD_MAX = 45;
     const DL_FROM = 80;
     let finalizeTimer = null;
     let animBand = DL_FROM - 1;
     let dlFloor = null;
-    let lastFileHevc = false, slowMsgShown1 = false, slowMsgShown2 = false;
+
     function stopFinalizeAnim() { if (finalizeTimer) { clearInterval(finalizeTimer); finalizeTimer = null; } }
 
     let _ceil = 0, _ceilHard = 0, _ceilTimer = null, _pinnedAt = 0;
@@ -551,44 +524,6 @@
           $("#progressPct").textContent = next.toFixed(1) + "%";
         } catch (e) {}
       }, 60);
-    }
-    function rtxCreepStart(from) {
-      let p = typeof from === "number" ? from : 80;
-      return setInterval(function () {
-        p = Math.min(97, p + 0.45);
-        rtxBar(p);
-      }, 60);
-    }
-    async function rtxRemux(blob, name, t0, t1) {
-      const lo = (typeof t0 === "number") ? t0 : 15;
-      const hi = (typeof t1 === "number") ? t1 : 60;
-      if (!window.RTXLocalConvert || !window.RTXLocalConvert.remux) {
-        throw new Error("the local remuxer did not load");
-      }
-      let out = await window.RTXLocalConvert.remux(
-        blob,
-        function (m) { procLog(m, "mut"); },
-        function (p) { rtxBar(lo + Math.round(p * (hi - lo)), "Optimizing…"); },
-        name
-      );
-      if (!out || !out.size) throw new Error("the remux produced nothing");
-      out = await rtxItsScale(out, hi, hi + 8);
-      return out;
-    }
-
-    async function rtxItsScale(blob, t0, t1) {
-      let on = false;
-      try { on = localStorage.getItem("john_quality_engine") === "ffmpeg" || localStorage.getItem("rtx_engine") === "ffmpeg"; } catch (e) { on = false; }
-      if (!on) return blob;
-      if (!window.RTXLocalConvert || !window.RTXLocalConvert.itsScale) return blob;
-      try {
-        const _fps = (lastScan && lastScan.fps) ? lastScan.fps : 0;
-        return await window.RTXLocalConvert.itsScale(blob, function (p) {
-          rtxBar(t0 + Math.round(p * (t1 - t0)), "Scaling frame rate…");
-        }, _fps);
-      } catch (e) {
-        return blob;
-      }
     }
 
     let _barHigh = 0;
@@ -619,34 +554,20 @@
       if (animBand > DL_FROM - 0.2) animBand = DL_FROM - 0.2;
       let pct = Math.max(UPLOAD_MAX, parseFloat($("#progressFill").style.width) || UPLOAD_MAX);
       if (pct >= animBand) pct = Math.max(UPLOAD_MAX, animBand - 0.1);
-      slowMsgShown1 = false;
       finalizeTimer = setInterval(() => {
         animBand = Math.min(DL_FROM - 0.2, animBand + 0.035);
         pct = Math.min(animBand - 0.05, pct + Math.max(0.045, (animBand - pct) * 0.07));
-        if (pct >= 55.5 && !slowMsgShown1) {
-          slowMsgShown1 = true;
-          procLog(lastFileHevc ? "Optimizing your H265 (HEVC) file — applying the TikTok-safe settings. Tip: H.264 files process faster."
-                               : "Optimizing your file — applying the TikTok-safe settings. Tip: H.264 files process the fastest.", "hi");
-        }
         if (pct > _barHigh) _barHigh = pct;
         $("#progressFill").style.width = pct + "%";
         $("#progressPct").textContent = pct.toFixed(1) + "%";
       }, 60);
     }
 
-    /* ── Auth check → set loggedIn state ─────────────────────── */
+    /* ── Auth check ─────────────────────────────────────────── */
     loadAuthState().then((user) => {
-      const me = AUTH_ME_RAW;
-      apiLive = true;
-      devMode = false;
       renderAuth(user, false);
       loggedIn = user ? true : false;
       if (user) {
-        tierKey = (user.tier && user.tier.tier) || "donor";
-        discordId = (me && me.discord_id) || "";
-        limitMB = 0;
-        tierLabel = "PREMIUM";
-        setLimit(0);
         setUsagePill(user);
         const lbl = $("#usage-tier-label"), cnt = $("#usage-count"), av = $("#usage-avatar");
         if (lbl) lbl.textContent = user.username || "User";
@@ -658,7 +579,6 @@
       }
     });
 
-    // Refresh auth periodically (e.g. token renewal)
     setInterval(() => {
       if (loggedIn !== true) return;
       api("/api/me").then((m) => {
@@ -668,19 +588,10 @@
     }, 45000);
 
     const scan = { size: $("#sv-size"), res: $("#sv-res"), dur: $("#sv-dur"), health: $("#sv-health") };
-    const gateState = { over: false, meta: null, caps: {} };
-
-    const setLimit = () => {
-      const fill = $("#limitFill");
-      const txt = $("#limitText");
-      if (fill) fill.style.width = "100%";
-      if (txt) txt.textContent = "Unlimited · PREMIUM";
-    };
 
     function resetTimers() { timers.forEach(clearTimeout); timers = []; }
     function resetUI() {
       probeBlocked = "";
-      stopWarm();
       resetTimers();
       stopFinalizeAnim();
       rtxCeilStop();
@@ -710,7 +621,6 @@
       if (dlBtn) { dlBtn.style.display = "none"; dlBtn.disabled = true; }
       if (clearBtn) clearBtn.style.display = "none";
       if (againBtn) againBtn.style.display = "none";
-      setLimit();
     }
 
     zone.addEventListener("click", () => {
@@ -736,99 +646,44 @@
       if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
     });
 
-  function handleFile(f) {
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    file = f;
-    objectUrl = URL.createObjectURL(f);
-    const sizeMB = f.size / (1024 * 1024);
-    if (scan.size) scan.size.textContent = sizeMB.toFixed(1) + " MB";
-    if (scan.res) scan.res.textContent = "SCANNING…";
-    if (scan.dur) scan.dur.textContent = "SCANNING…";
-    if (scan.health) { scan.health.textContent = "SCANNING…"; scan.health.style.color = "var(--text-3)"; }
-    setLimit();
-    const sv = $("#scanView");
-    if (sv) sv.classList.add("show");
-    probeBlocked = "";
-    if (runBtn) runBtn.disabled = false;
+    function handleFile(f) {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      file = f;
+      objectUrl = URL.createObjectURL(f);
+      const sizeMB = f.size / (1024 * 1024);
+      if (scan.size) scan.size.textContent = sizeMB.toFixed(1) + " MB";
+      if (scan.res) scan.res.textContent = "SCANNING…";
+      if (scan.dur) scan.dur.textContent = "SCANNING…";
+      if (scan.health) { scan.health.textContent = "SCANNING…"; scan.health.style.color = "var(--text-3)"; }
+      const sv = $("#scanView");
+      if (sv) sv.classList.add("show");
+      probeBlocked = "";
+      if (runBtn) runBtn.disabled = false;
 
-    try {
-      if (window.RTXLocal && window.RTXLocal.probe) {
-        window.RTXLocal.probe(f).then(function (pr) {
-          if (!pr || pr.ok) return;
-          const _why = String(pr.reason || "");
-          if (/No audio track|No video track/i.test(_why)) {
-            probeBlocked = _why;
-            if (runBtn) runBtn.disabled = true;
-            if (scan.health) {
-              scan.health.textContent = /No audio track/i.test(_why) ? "NO SOUND TRACK" : "NO VIDEO TRACK";
-              scan.health.style.color = "var(--red)";
-            }
-            lastHealth = scan.health ? scan.health.textContent : "";
-            procLog("Cannot optimize this file - " + _why, "err");
-          } else {
-            procLog("This file will need converting first: " + _why, "mut");
-          }
-        }).catch(function () {});
-      }
-    } catch (e) {}
-
-    lastScan = null; lastHealth = "";
-    readVideoMeta(f).then((meta) => {
-      lastScan = meta || null;
-      if (!meta) {
-        if (scan.res) scan.res.textContent = "UNKNOWN";
-        if (scan.dur) scan.dur.textContent = "UNKNOWN";
+      lastScan = null; lastHealth = "";
+      readVideoMeta(f).then((meta) => {
+        lastScan = meta || null;
+        if (!meta) {
+          if (scan.res) scan.res.textContent = "UNKNOWN";
+          if (scan.dur) scan.dur.textContent = "UNKNOWN";
+          if (scan.health) { scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)"; }
+          lastHealth = "READY TO OPTIMIZE";
+          return;
+        }
+        if (meta.w > 0 && meta.h > 0) {
+          if (scan.res) scan.res.textContent = meta.w + "×" + meta.h + (meta.codec === "hevc" ? " · H265 (HEVC)" : "");
+        } else if (scan.res) scan.res.textContent = "UNKNOWN";
+        if (meta.codec === "hevc") {
+          procLog("H265 (HEVC) detected. Optimising now. Tip: H.264 files are recommended.", "ok");
+        }
+        if (scan.dur) {
+          if (meta.dur > 0) scan.dur.textContent = Math.floor(meta.dur / 60) + ":" + String(Math.floor(meta.dur % 60)).padStart(2, "0");
+          else scan.dur.textContent = "UNKNOWN";
+        }
         if (scan.health) { scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)"; }
         lastHealth = "READY TO OPTIMIZE";
-        return;
-      }
-      if (meta.w > 0 && meta.h > 0) {
-        if (scan.res) scan.res.textContent = meta.w + "×" + meta.h + (meta.codec === "hevc" ? " · H265 (HEVC)" : "");
-      } else if (scan.res) scan.res.textContent = "UNKNOWN";
-      if (meta.codec === "hevc") {
-        procLog("H265 (HEVC) detected. Optimising now. Tip: H.264 files are recommended.", "ok");
-      }
-      if (scan.dur) {
-        if (meta.dur > 0) scan.dur.textContent = Math.floor(meta.dur / 60) + ":" + String(Math.floor(meta.dur % 60)).padStart(2, "0");
-        else scan.dur.textContent = "UNKNOWN";
-      }
-      const blocked = !!probeBlocked;
-      if (runBtn) runBtn.disabled = blocked;
-      gateState.over = false; gateState.meta = meta; gateState.caps = {};
-      if (blocked) {
-        if (scan.health) { scan.health.textContent = "CANNOT OPTIMIZE"; scan.health.style.color = "var(--red)"; }
-      } else {
-        if (scan.health) { scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)"; }
-        lastHealth = "READY TO OPTIMIZE";
-      }
-    });
-  }
-
-    function sniffVideoCodec(file) {
-      return new Promise((resolve) => {
-        const markers = { avc1: "h264", avc3: "h264", avc4: "h264", hvc1: "hevc", hev1: "hevc", hev2: "hevc" };
-        const reader = file.stream().getReader();
-        const dec = new TextDecoder("latin1");
-        let tail = "";
-        function done(codec) { try { reader.cancel(); } catch (e) {} resolve(codec); }
-        (function next() {
-          reader.read().then(({ done: fin, value }) => {
-            if (fin) { resolve(null); return; }
-            const s = tail + dec.decode(value, { stream: true });
-            let best = null; let bestIdx = 1e18;
-            for (const m in markers) {
-              const i = s.indexOf(m);
-              if (i !== -1 && i < bestIdx) { bestIdx = i; best = markers[m]; }
-            }
-            if (best) { done(best); return; }
-            tail = s.slice(-8);
-            next();
-          }).catch(() => resolve(null));
-        })();
       });
     }
-
-    function stopWarm() {}
 
     runBtn.addEventListener("click", async () => {
       if (loggedIn === false) { signInWithGoogle(); return; }
@@ -837,17 +692,7 @@
         if (!user) { signInWithGoogle(); return; }
       }
       if (!file) { input.click(); return; }
-      const _h264Box = document.getElementById("h264Convert");
-      if (_h264Box && _h264Box.checked) {
-        try {
-          const sniffed = await sniffVideoCodec(file);
-          if (sniffed === "h264") {
-            procLog("Your file is H.264 - please untick 'Convert H265 (HEVC) to H.264' and try again. (Process not started.)");
-            alert("Your file is H.264 - please untick 'Convert H265 (HEVC) to H.264' and try again.");
-            return;
-          }
-        } catch (e) {}
-      }
+
       resetTimers();
       abortCtrl = new AbortController();
       const myCtrl = abortCtrl;
@@ -858,13 +703,14 @@
       rtxCeilStage(UPLOAD_MAX);
       rtxCeilStart();
       activeXhr = null;
+
       const dz = $("#dropZoneWrap"); if (dz) dz.style.display = "none";
       const pv = $("#processingView"); if (pv) pv.style.display = "block";
       const pf = $("#progressFill"); if (pf) pf.style.width = "0";
       const pp = $("#progressPct"); if (pp) pp.textContent = "0%";
       _barHigh = 0;
       dlFloor = null;
-      const ps = $("#progressStage"); if (ps) ps.textContent = "Checking daily usage…";
+      const ps = $("#progressStage"); if (ps) ps.textContent = "Authorizing…";
       const prs = $("#procStatus"); if (prs) prs.textContent = "JOHN_QUALITY Engine v2 · CLOUD";
       if (dlBtn) dlBtn.disabled = true;
 
@@ -908,205 +754,79 @@
 
           $("#progressStage").textContent = "Optimizing…";
           procLog("Connecting to the optimizer service…", "pur");
-          const _hevcUpload = await clientDetectHEVC(file);
-          lastFileHevc = !!_hevcUpload;
+
           const fd = new FormData();
-          if (_hevcUpload) {
-            fd.append("vhevc", "1");
-            procLog("H265 (HEVC) detected. Optimising now. Tip: H.264 files are recommended.", "ok");
-          }
-          const _h264Box = document.getElementById("h264Convert");
-          if (_h264Box && _h264Box.checked) {
-            fd.append("h264", "1");
-            procLog("H265 (HEVC) → H.264 conversion requested.", "ok");
-          }
-          try {
-            if (localStorage.getItem("john_quality_engine") === "ffmpeg" || localStorage.getItem("rtx_engine") === "ffmpeg") fd.append("engine", "ffmpeg");
-          } catch (e) {}
-          fd.append("patcher", "main");
           fd.append("file", file, file.name);
+          const _h264Box = document.getElementById("h264Convert");
+          if (_h264Box && _h264Box.checked) fd.append("h264", "1");
+          try {
+            if (localStorage.getItem("john_quality_engine") === "ffmpeg") fd.append("engine", "ffmpeg");
+          } catch (e) {}
 
-          const patchUrl = "/api/patch-rtx";
-          const safeName = file.name.replace(/[^\x20-\x7E]/g, "_");
-          const sess = localStorage.getItem("jq_session") || "";
-
-          // ── Progress-model: this run uses local patch engine ──
-          let outBuf = null;
-
-          const _rtxConvert = rtxWantsH264();
-
-          if (outBuf === null && _rtxConvert && window.RTXLocal) {
-            try {
-              if (!window.RTXLocalConvert) throw new Error("the local encoder is unavailable");
-              window.__rtxJobAction = "H.265 to H.264 encode (device)";
-              rtxCeilStage(79);
-              const _conv = await window.RTXLocalConvert.encode(
-                file,
-                function (m) { procLog(m, "mut"); },
-                function (p) { if (isDead()) return; rtxBar(20 + Math.round(p * 55), "Converting to H.264…"); }
-              );
-              rtxBar(80, "Optimizing…");
-              const _lr2 = await window.RTXLocal.patch(await rtxRemux(_conv, file.name, 82, 88), function () {});
-              outBuf = _lr2 && _lr2.blob && _lr2.blob.size ? _lr2.blob : null;
-              if (!outBuf) throw new Error("local patch produced nothing");
-              try { window.__rtxOutBlob = outBuf; } catch (e3) {}
-              (function revealLocalButtons() {
-                var n = 0;
-                var t = setInterval(function () {
-                  n++;
-                  try {
-                    var d = document.getElementById("dlBtn");
-                    var a = document.getElementById("againBtn");
-                    if (d && d.style.display === "none") { d.style.display = ""; d.disabled = false; }
-                    if (a && a.style.display === "none") a.style.display = "";
-                  } catch (e3) {}
-                  if (n >= 24) clearInterval(t);
-                }, 250);
-              })();
-            } catch (e2) {
-              procLog("Local encode failed: " + (e2 && e2.message ? e2.message : e2), "err");
-              $("#procStatus").textContent = "Encoding failed";
-              $("#progressStage").textContent = (e2 && e2.message ? e2.message : "Could not encode this file.");
-              if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-              file = null; input.value = "";
-              timers.push(setTimeout(() => resetUI(), 8000));
-              return;
-            }
+          const xhr = new XMLHttpRequest();
+          activeXhr = xhr;
+          xhr.open("POST", "/api/patch-rtx");
+          xhr.responseType = "blob";
+          xhr.setRequestHeader("X-Patch-Token", tk.token);
+          if (tk.token && tk.token.split(":")[1]) {
+            xhr.setRequestHeader("X-Discord-Id", tk.token.split(":")[1]);
           }
+          xhr.setRequestHeader("X-Filename", file.name.replace(/[^\x20-\x7E]/g, "_"));
 
-          if (outBuf === null && !_rtxConvert) {
-            if (!window.RTXLocal) {
-              throw new Error("The in-browser optimizer did not load. Reload the page and try again.");
+          xhr.upload.onprogress = (ev) => {
+            if (!ev.lengthComputable) return;
+            const pct = Math.min(UPLOAD_MAX, 1 + Math.round((ev.loaded / ev.total) * (UPLOAD_MAX - 1)));
+            $("#progressFill").style.width = pct + "%";
+            $("#progressPct").textContent = Math.round(pct) + "%";
+            $("#progressStage").textContent = "Uploading " + fmtBytes(ev.loaded) + " / " + fmtBytes(ev.total);
+          };
+          xhr.upload.onload = () => {
+            $("#progressStage").textContent = "Optimizing…";
+            startFinalizeAnim();
+          };
+          xhr.onprogress = (ev) => {
+            if (ev.lengthComputable && ev.total > 0) {
+              const pct = dlProgress(ev.loaded, ev.total);
+              $("#progressFill").style.width = pct + "%";
+              $("#progressPct").textContent = pct.toFixed(1) + "%";
+              $("#progressStage").textContent = "Downloading " + fmtBytes(ev.loaded) + " / " + fmtBytes(ev.total);
             }
-            try {
-              const _lr = await window.RTXLocal.patch(await rtxRemux(file, file.name), function () {});
-              outBuf = _lr && _lr.blob && _lr.blob.size ? _lr.blob : null;
-              if (!outBuf) throw new Error("local patch produced nothing");
-              try { window.__rtxOutBlob = outBuf; } catch (e) {}
-              (function revealLocalButtons() {
-                var n = 0;
-                var t = setInterval(function () {
-                  n++;
-                  try {
-                    var d = document.getElementById("dlBtn");
-                    var a = document.getElementById("againBtn");
-                    if (d && d.style.display === "none") { d.style.display = ""; d.disabled = false; }
-                    if (a && a.style.display === "none") a.style.display = "";
-                  } catch (e) {}
-                  if (n >= 24) clearInterval(t);
-                }, 250);
-              })();
-            } catch (e) {
-              if (e && e.message === "aborted") throw e;
-              const _refusal = String((e && e.message) || e);
-              if (/No audio track|No video track/i.test(_refusal)) {
-                procLog("Cannot optimize this file: " + _refusal, "err");
-                $("#procStatus").textContent = "Cannot optimize this file";
-                $("#progressStage").textContent = /No audio track/i.test(_refusal)
-                  ? "This video has no sound track, so it cannot be optimized."
-                  : "This video has no video track, so it cannot be optimized.";
-                if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-                file = null; input.value = "";
-                timers.push(setTimeout(() => resetUI(), 8000));
-                return;
-              }
-              try {
-                if (!window.RTXLocalConvert) throw new Error("the local encoder is unavailable");
-                window.__rtxJobAction = "H.265 to H.264 encode (device)";
-                rtxCeilStage(79);
-                const _rconv = await window.RTXLocalConvert.encode(
-                  file,
-                  function (m) { procLog(m, "mut"); },
-                  function (p) { if (isDead()) return; rtxBar(20 + Math.round(p * 55), "Converting to H.264…"); }
-                );
-                rtxBar(80, "Optimizing…");
-                let _rlr;
-                try {
-                  _rlr = await window.RTXLocal.patch(await rtxItsScale(_rconv, 80, 88), function () {});
-                } catch (ePatch) {
-                  throw new Error("the encode finished, but the encoded file could not be patched: "
-                    + ((ePatch && ePatch.message) || ePatch));
-                }
-                outBuf = _rlr && _rlr.blob && _rlr.blob.size ? _rlr.blob : null;
-                if (!outBuf) throw new Error("the local encoder produced nothing");
-                try { window.__rtxOutBlob = outBuf; } catch (e3) {}
-                (function revealLocalButtons() {
-                  var n = 0;
-                  var t = setInterval(function () {
-                    n++;
-                    try {
-                      var d = document.getElementById("dlBtn");
-                      var a = document.getElementById("againBtn");
-                      if (d && d.style.display === "none") { d.style.display = ""; d.disabled = false; }
-                      if (a && a.style.display === "none") a.style.display = "";
-                    } catch (e3) {}
-                    if (n >= 24) clearInterval(t);
-                  }, 250);
-                })();
-              } catch (e2) {
-                try { console.error("[john_quality] job failed:", e2); } catch (e3) {}
-                procLog("Could not finish this file on your device. Please try again.", "err");
-                $("#procStatus").textContent = "Could not finish";
-                $("#progressStage").textContent = "Could not finish this file on your device. Please try again.";
-                if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-                file = null; input.value = "";
-                timers.push(setTimeout(() => resetUI(), 8000));
-                return;
-              }
-            }
-          }
+          };
 
-          if (outBuf === null) {
-            throw new Error("This file could not be optimized on your device.");
-          }
+          const blob = await new Promise((resolve, reject) => {
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) { resolve(xhr.response); return; }
+              const errBody = xhr.response;
+              const err = new Error("Optimization failed (" + xhr.status + ")");
+              err.status = xhr.status;
+              if (errBody instanceof Blob) {
+                errBody.text().then((t) => {
+                  try { const j = JSON.parse(t); if (j && j.error) err.message = j.error; } catch (e) {}
+                  reject(err);
+                }).catch(() => reject(err));
+              } else { reject(err); }
+            };
+            xhr.onerror = () => reject(new Error("Connection interrupted — try again."));
+            xhr.onabort = () => reject(new Error("aborted"));
+            xhr.send(fd);
+          });
 
-          // ── Upload the patched file to Cloudinary via the server ──
-          // (Optional: if you want cloud storage, POST to /api/patch-rtx)
-          // For the fast path, we keep the blob in memory and serve it locally.
-
-          if (!(outBuf instanceof Blob)) throw new Error("Empty result from patch engine.");
+          if (!(blob instanceof Blob)) throw new Error("Empty response.");
           stopFinalizeAnim();
 
           $("#progressFill").style.width = "100%";
           $("#progressPct").textContent = "100%";
-          $("#progressStage").textContent = "Finalizing…";
+          $("#progressStage").textContent = "Optimization complete.";
           await new Promise((resolve) => setTimeout(resolve, 200));
           if (isDead()) throw new Error("aborted");
 
           window.__rtxBusy = false;
-          const blob = outBuf;
-
-          // Record the job in the backend (for admin logs + Firestore counter)
-          try {
-            const _raw = String((lastScan && lastScan.codec) || "").toLowerCase();
-            const _sc = /^(avc1|avc3|h264|x264)$/.test(_raw) ? "h264"
-                      : /^(hvc1|hev1|hevc|h265|x265)$/.test(_raw) ? "hevc"
-                      : _raw;
-            const _action = window.__rtxJobAction || (_rtxConvert
-              ? "H.265 to H.264 encode (device)"
-              : ("Remuxed (" + (_sc === "hevc" ? "HEVC" : "H.264") + ")"));
-            const _qs = new URLSearchParams({
-              sizeMb: String(Math.round((blob.size / 1048576) * 100) / 100),
-              codec: (_sc || "h264").slice(0, 16),
-              container: "mov",
-              action: _action.slice(0, 80),
-              result: "ok",
-            });
-            await Promise.race([
-              fetch("/api/patch-rtx/job-record?" + _qs.toString(), {
-                method: "POST",
-                headers: { "X-Patch-Token": tk.token, Authorization: "Bearer " + sess },
-              }).catch(function () {}),
-              new Promise(function (r) { setTimeout(r, 2500); }),
-            ]);
-          } catch (e) {}
 
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           objectUrl = URL.createObjectURL(blob);
           try { window.__rtxOutBlob = blob; } catch (e) {}
           patchedName = "john-quality-optimized-" + Math.random().toString(16).slice(2, 6) + ".mp4";
-          $("#progressFill").style.width = "100%";
-          $("#progressPct").textContent = "100%";
+
           $("#dropZoneWrap").style.display = "none";
           $("#processingView").style.display = "block";
           $("#cancelBtn").style.display = "none";
@@ -1114,11 +834,6 @@
           $("#procStatus").textContent = "Done — click Download";
           procLog("Output: " + patchedName + " (" + fmtBytes(blob.size) + ")", "ok");
 
-          var _ffmpegEngine = false;
-          try { _ffmpegEngine = localStorage.getItem("john_quality_engine") === "ffmpeg" || localStorage.getItem("rtx_engine") === "ffmpeg"; } catch (e) {}
-          if (_ffmpegEngine) {
-            procLog("Note: Don't worry if the video lags locally. It will play smooth once uploaded to TikTok.", "warn");
-          }
           window.__rtxDoneAt = Date.now();
           if (againBtn) { againBtn.style.display = ""; againBtn.textContent = AGAIN_LABEL; }
           try { dlBtn.style.display = ""; dlBtn.disabled = false; dlBtn.classList.add("pulse"); dlBtn.scrollIntoView({ behavior: "smooth", block: "center" }); }
@@ -1138,8 +853,7 @@
           $("#procStatus").textContent = "Error";
           window.__rtxBusy = false;
           const _rtxErrMsg = (e && e.message) || "optimization failed";
-          let _rtxStage = _rtxErrMsg + " - try another file";
-          $("#progressStage").textContent = _rtxStage;
+          $("#progressStage").textContent = _rtxErrMsg + " - try another file";
           $("#cancelBtn").style.display = "none";
           dlBtn.style.display = "none"; dlBtn.disabled = true;
           if (againBtn) { againBtn.textContent = "Try Again"; againBtn.style.display = ""; }
@@ -1150,7 +864,6 @@
     $("#cancelBtn").addEventListener("click", () => {
       if (abortCtrl) abortCtrl.abort();
       if (activeXhr) activeXhr.abort();
-      try { if (window.RTXLocalConvert && window.RTXLocalConvert.reset) window.RTXLocalConvert.reset(); } catch (e) {}
       window.__rtxBusy = false;
       rtxCeilStop();
       resetTimers();
@@ -1259,15 +972,12 @@
   }
 
   /* ── Admin ─────────────────────────────────────────────────── */
-  let admPage = 1, admPer = 50;
   function initAdmin() {
     const form = $("#admin-login-form"), panel = $("#admin-panel");
     function showPanel() {
       if (form) form.style.display = "none";
       if (panel) panel.style.display = "";
-      initJobsPanel();
       loadUsers();
-      loadJobs();
     }
     async function tryLoadUsers() {
       const r = await api("/api/admin/users");
@@ -1288,84 +998,6 @@
     const lo = $("#admin-logout"), rf = $("#admin-refresh");
     if (lo) lo.addEventListener("click", async () => { localStorage.removeItem("jq_admin"); location.reload(); });
     if (rf) rf.addEventListener("click", loadUsers);
-  }
-
-  async function clientDetectHEVC(f) {
-    try {
-      if (!f || f.size < 4096) return false;
-      const read = (s, e) => new Promise((res) => {
-        const fr = new FileReader();
-        fr.onload = () => res(new Uint8Array(fr.result));
-        fr.onerror = () => res(new Uint8Array(0));
-        fr.readAsArrayBuffer(f.slice(Math.max(0, s), e));
-      });
-      const toStr = (a) => {
-        let s2 = ""; const CH = 8192;
-        for (let i = 0; i < a.length; i += CH) s2 += String.fromCharCode.apply(null, a.subarray(i, Math.min(i + CH, a.length)));
-        return s2;
-      };
-      const head = await read(0, Math.min(f.size, 4194304));
-      const tail = await read(Math.max(0, f.size - 2621440), f.size);
-      const hay = toStr(head) + toStr(tail);
-      const hevc = hay.indexOf("hvc1") >= 0 || hay.indexOf("hev1") >= 0 || hay.indexOf("V_MPEGH/ISO/HEVC") >= 0;
-      return hevc;
-    } catch (e) { return false; }
-  }
-
-  /* ── Admin jobs panel ──────────────────────────────────────── */
-  let _jobsTimer = null;
-  function _jobEsc(v) { return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
-  function _jobSize(mb) { mb = Number(mb) || 0; return mb >= 1024 ? (mb / 1024).toFixed(2) + " GB" : mb.toFixed(1) + " MB"; }
-  function initJobsPanel() {
-    const panel = $("#admin-panel");
-    if (!panel || document.getElementById("admin-jobs-wrap")) return;
-    const wrap = el("div", "", "");
-    wrap.id = "admin-jobs-wrap";
-    wrap.style.cssText = "margin-top:26px;border-top:1px solid rgba(255,255,255,.08);padding-top:16px;";
-    const head = el("div", "", "");
-    head.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;";
-    const title = el("h3", "", "");
-    title.style.cssText = "margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.1em;opacity:.75;";
-    title.textContent = "Recent jobs — last 5 minutes";
-    const refresh = el("button", "btn btn-clear", "");
-    refresh.textContent = "Refresh jobs";
-    refresh.addEventListener("click", loadJobs);
-    head.appendChild(title);
-    head.appendChild(refresh);
-    wrap.appendChild(head);
-    const tw = el("div", "admin-table-wrap", "");
-    tw.innerHTML = '<table class="admin-table"><thead><tr><th>Time (UTC)</th><th>Size</th><th>Codec</th><th>Container</th><th>User</th><th>Job</th><th>Result</th></tr></thead><tbody id="admin-jobs-tbody"></tbody></table>';
-    wrap.appendChild(tw);
-    panel.appendChild(wrap);
-    if (_jobsTimer) clearInterval(_jobsTimer);
-    _jobsTimer = setInterval(() => {
-      const p = $("#admin-panel");
-      if (p && p.style.display !== "none") loadJobs();
-    }, 10000);
-  }
-  async function loadJobs() {
-    const tb = $("#admin-jobs-tbody");
-    if (!tb) return;
-    try {
-      const r = await api("/api/admin/jobs", { cache: "no-store" });
-      const body = (r && r.json) || r || {};
-      const jobs = Array.isArray(body.jobs) ? body.jobs : [];
-      if (!r || !r.ok) {
-        tb.innerHTML = '<tr><td colspan="7" style="opacity:.5">Jobs unavailable.</td></tr>';
-        return;
-      }
-      if (!jobs.length) {
-        tb.innerHTML = '<tr><td colspan="7" style="opacity:.5">No jobs in the last 5 minutes yet.</td></tr>';
-        return;
-      }
-      tb.innerHTML = jobs.slice().reverse().map((j) => {
-        const t = j.ts ? new Date(j.ts).toISOString().slice(11, 19) : "-";
-        const bad = j.result && j.result !== "ok";
-        return '<tr><td>' + t + '</td><td>' + _jobSize(j.sizeMb) + '</td><td>' + _jobEsc(j.codec || "-") + '</td><td>' + _jobEsc(j.container || "-") + '</td><td>' + _jobEsc(j.user || "-") + '</td><td>' + _jobEsc(j.action || "-") + '</td><td style="color:' + (bad ? "#ff5c7c" : "#3ecf8e") + '">' + _jobEsc(bad ? (j.detail || j.result) : "done") + '</td></tr>';
-      }).join("");
-    } catch (e) {
-      tb.innerHTML = '<tr><td colspan="7" style="opacity:.5">Failed to load jobs.</td></tr>';
-    }
   }
 
   async function loadUsers() {
@@ -1444,7 +1076,6 @@
                   AUTH_ME_RAW = d.user;
                   AUTH_RESOLVED = true;
                   renderAuth(AUTH_USER, false);
-                  renderTierCtas("donor");
                 }
               })
               .catch(() => {});
@@ -1481,7 +1112,6 @@
     AUTH_RESOLVED = true;
     AUTH_STATE = null;
     renderAuth(null, false);
-    renderTierCtas(null);
     location.reload();
   }
 
@@ -1552,8 +1182,6 @@
   let AUTH_RESOLVED = false;
   const AUTH_LS_KEY = "johnquality:last";
 
-  function authConfirmedSignedOut() { return AUTH_RESOLVED && !AUTH_USER; }
-
   function readCachedAuth() {
     try { const raw = localStorage.getItem(AUTH_LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
   }
@@ -1568,22 +1196,18 @@
   function applyAuthState(user, devMode) {
     AUTH_USER = user;
     renderAuth(user, devMode);
-    renderTierCtas(user && user.tier && user.tier.tier);
   }
 
   function loadAuthState() {
     if (AUTH_STATE) return AUTH_STATE;
 
-    // 1. Try the cached signed-in user for instant paint
     if (!AUTH_USER) {
       const c = readCachedAuth();
       if (c) applyAuthState(c, false);
     }
 
-    // 2. Initialize Firebase (idempotent)
     const auth = initFirebaseClient();
 
-    // 3. Check for a stored session JWT
     const stored = localStorage.getItem("jq_session");
     if (stored) {
       try {
@@ -1600,17 +1224,14 @@
           AUTH_RESOLVED = true;
           AUTH_STATE = Promise.resolve(u);
           renderAuth(u, false);
-          renderTierCtas("donor");
           return AUTH_STATE;
         }
       } catch (e) {}
     }
 
-    // 4. No session — signed out
     AUTH_RESOLVED = true;
     AUTH_STATE = Promise.resolve(null);
     renderAuth(null, false);
-    renderTierCtas(null);
     return AUTH_STATE;
   }
 
@@ -1620,22 +1241,6 @@
     const prev = (AUTH_USER && AUTH_USER.tier && AUTH_USER.tier.tier) || null;
     if (next !== prev) applyAuthState(user, false);
     return user;
-  }
-
-  /* ── Tier CTAs ─────────────────────────────────────────────── */
-  const CTA_TIER = { "join server": "member", "join": "donor" };
-  function renderTierCtas(tierKey) {
-    $$(".tier-btn").forEach((b) => {
-      if (!b.dataset.baseLabel) b.dataset.baseLabel = (b.textContent || "").trim();
-      const card = b.closest("[data-tier]");
-      const key = (card && card.dataset.tier) || CTA_TIER[b.dataset.baseLabel.toLowerCase()] || null;
-      if (!key) return;
-      const mine = !!tierKey && key === tierKey;
-      b.textContent = mine ? "Activated" : b.dataset.baseLabel;
-      b.classList.toggle("activated", mine);
-      if (mine) { b.setAttribute("aria-disabled", "true"); b.setAttribute("tabindex", "-1"); }
-      else { b.removeAttribute("aria-disabled"); b.removeAttribute("tabindex"); }
-    });
   }
 
   /* ── Best upload times ─────────────────────────────────────── */
@@ -1702,13 +1307,9 @@
     initReveal();
     initBestTimes();
 
-    // Kick off Firebase as early as possible
     initFirebaseClient();
-
-    // Load the auth state
     loadAuthState();
 
-    // Attach the Google button on the /login view (if present)
     const gBtn = document.getElementById("google-signin-btn");
     if (gBtn) gBtn.onclick = signInWithGoogle;
 
@@ -1792,25 +1393,4 @@
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
-})();
-
-/* ── Stale-tab guard ────────────────────────────────────────── */
-(function () {
-  try {
-    var here = (document.currentScript && document.currentScript.src) || "";
-    var mine = (here.match(/shared\.js\?v=(\d+)/) || [])[1];
-    if (!mine) return;
-    function check() {
-      if (window.__rtxBusy) return;
-      fetch(location.pathname, { cache: "no-store" })
-        .then(function (r) { return r.text(); })
-        .then(function (t) {
-          var m = t.match(/shared\.js\?v=(\d+)/);
-          if (m && Number(m[1]) !== Number(mine)) location.reload();
-        })
-        .catch(function () {});
-    }
-    setTimeout(check, 10000);
-    setInterval(check, 60000);
-  } catch (e) {}
 })();
