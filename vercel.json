@@ -11,5 +11,13 @@
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/(.*)\\.(js|css|json|jpg|jpeg|png|svg|ico|webp|woff|woff2|ttf)", "dest": "/$1" },
     { "src": "/(.*)", "dest": "/server.js" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+      ]
+    }
   ]
 }
