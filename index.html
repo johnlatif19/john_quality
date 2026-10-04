@@ -21,11 +21,6 @@
 <meta name="twitter:description" content="Optimize MP4/MOV files so TikTok applies less compression — keep 4K, 120fps and original quality. No re-encoding."/>
 <meta name="twitter:image" content="https://www.johnquality.xyz/assets/banner.png"/>
 <!-- Structured data -->
- 
-<!-- Firebase Client SDK (for Google Sign-In) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -43,6 +38,11 @@
 <link rel="icon" type="image/jpeg" href="assets/logo.jpg"/>
 <link rel="stylesheet" href="assets/shared.css?v=28"/>
 <script src="assets/rtx-patch-local.js?v=100"></script>
+
+<!-- Firebase Client SDK (Google Sign-In) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
 <style>
   #dlBtn {
     background: #22c55e;
@@ -127,7 +127,31 @@
 #rtxTestModal #rtxProgLabel{color:#8A8A8A;font:500 12.5px/1.4 system-ui,-apple-system,sans-serif;margin-bottom:8px;word-break:break-all}
 #rtxTestModal #rtxProgTrack{height:6px;border-radius:3px;background:#1F1F1F;overflow:hidden}
 #rtxTestModal #rtxProgFill{height:100%;width:0;background:#FE2C55;border-radius:3px;transition:width .25s linear}
-</style></head>
+
+/* Google Sign-In button (used in nav + login card) */
+.btn-google {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  background: #ffffff; color: #1a1a1a; border: 1px solid rgba(0,0,0,.08);
+  border-radius: 10px; padding: 12px 22px; font-size: 15px; font-weight: 700;
+  letter-spacing: .02em; cursor: pointer; transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,.10), 0 10px 24px rgba(0,0,0,.18);
+}
+.btn-google:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.14), 0 14px 30px rgba(0,0,0,.22); }
+.btn-google:active { transform: translateY(0); }
+.btn-google svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
+/* Sidebar-style login button in nav (looks like the other nav items) */
+.nav-login-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #ffffff; color: #0a0a0a; border: 0; border-radius: 9px;
+  padding: 8px 14px; font-size: 13px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; cursor: pointer; transition: background .2s ease, transform .15s ease;
+  white-space: nowrap;
+}
+.nav-login-btn:hover { background: #f0f0f0; }
+.nav-login-btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
+</style>
+</head>
 <body data-page="app">
 
 <nav class="top-nav">
@@ -148,16 +172,24 @@
       <span class="nav-user-name" id="nav-user-name"></span>
       <span class="nav-user-tier" id="nav-user-tier"></span>
     </div>
+    <button class="nav-login-btn" id="bn-login" type="button" aria-label="Sign in">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Sign in
+    </button>
     <button class="btn-ghost" id="btn-logout" style="display:none">Logout</button>
   </div>
-    <button class="bn-item" id="bn-login" type="button"><span>Login</span></button>
 </nav>
 
 <div class="page">
-  <a class="tg-strip" href="https://t.me/JOHN_QUALITYBot?start=site" target="_blank" rel="noopener">
-    <span class="tg-strip-ico" aria-hidden="true">🎁</span>
-    <span>Get <b>Unlimited uploads</b> by joining our <b>Telegram Channel</b> &middot; Free Premium promos soon</span>
-  </a>
+  <div class="tg-strip" style="cursor:default">
+    <span class="tg-strip-ico" aria-hidden="true">⚡</span>
+    <span>All features are <b>Unlimited</b> for everyone &middot; Sign in with Google to start</span>
+  </div>
 
 <!-- ══════════════ VIEW: DASHBOARD ══════════════ -->
   <section class="view" data-view="dashboard">
@@ -194,7 +226,7 @@
               <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
             </div>
             <div class="kpi-value" id="kpi-users">0</div>
-            <div class="kpi-foot">DISCORD AND TELEGRAM SYNCED ACCOUNTS</div>
+            <div class="kpi-foot">GOOGLE ACCOUNTS</div>
             <div class="kpi-sub" id="kpi-users-foot"></div>
           </div>
           <div class="card reveal" style="--d:.19s">
@@ -244,64 +276,6 @@
             <div class="pb-track"><div class="pb-fill" id="pb-fill"></div></div>
           </div>
         </div>
-
-        <div class="tier-grid">
-          <div class="tier-card reveal" data-tier="member" style="--d:.1s">
-            <span class="tier-key">MEMBER</span>
-            <div class="tier-name">Free</div>
-            <div class="tier-sub">Join the server</div>
-            <div class="tier-feats">
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg>Topaz preset</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Handbrake preset</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg>Colour correction preset</div>
-            </div>
-            <a class="tier-btn" data-discord-link href="#">Join server</a>
-          </div>
-          <div class="tier-card reveal" data-tier="booster" style="--d:.18s">
-            <span class="tier-key">BOOSTER</span>
-            <div class="tier-name">Booster</div>
-            <div class="tier-sub">Join the server</div>
-            <div class="tier-feats">
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg>Topaz preset</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Handbrake preset</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg>Colour correction preset</div>
-            </div>
-            <a class="tier-btn" data-discord-link href="#">Join server</a>
-          </div>
-          <div class="tier-card featured reveal" data-tier="donor" style="--d:.22s">
-            <span class="rec-chip">Recommended</span>
-            <span class="tier-key">PREMIUM</span>
-            <div class="tier-name">Premium</div>
-            <div class="tier-sub">All features unlocked</div>
-            <div class="tier-feats">
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0 + priority</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b> skip FPS check</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg><b>Topaz preset</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg><b>Handbrake preset</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg><b>Colour correction preset</b></div>
-            </div>
-            <a class="tier-btn" data-discord-link href="#">Join</a>
-          </div>
-        </div>
       </section>
 
       <section class="section reveal" style="--d:.2s">
@@ -346,7 +320,7 @@
 
       <div class="faq-item">
         <button class="faq-q" type="button">TikTok still compressed my video. Why?<span class="faq-caret">▴</span></button>
-        <div class="faq-a">After optimizing, do not edit the video (TikTok sounds, trimming, filters, etc.), or TikTok may re-encode and compress it. Upload the optimized file exactly as downloaded with visibility set to "Everyone", not "Only Me".<br><br>Check what TikTok actually delivers by pasting your published link into <a href="/analytics" style="color:#58a6ff;text-decoration:underline">Analytics</a> or our <a href="https://t.me/JOHN_QUALITYBot?start=site" target="_blank" rel="noopener" style="color:#58a6ff;text-decoration:underline">Telegram Bot</a></div>
+        <div class="faq-a">After optimizing, do not edit the video (TikTok sounds, trimming, filters, etc.), or TikTok may re-encode and compress it. Upload the optimized file exactly as downloaded with visibility set to "Everyone", not "Only Me".<br><br>Check what TikTok actually delivers by pasting your published link into <a href="/analytics" style="color:#58a6ff;text-decoration:underline">Analytics</a>.</div>
       </div>
 
       <div class="faq-item">
@@ -368,8 +342,6 @@
         <button class="faq-q" type="button">How do I upload TikTok videos without compression?<span class="faq-caret">▴</span></button>
         <div class="faq-a">TikTok always compresses uploads, but you can keep near-lossless quality with JOHN_QUALITY <a href="/patcher" style="color:#58a6ff;text-decoration:underline">Video Optimizer</a>. Optimize your MP4/MOV with the <a href="/patcher" style="color:#58a6ff;text-decoration:underline">Video Optimizer</a>, enable Upload HD, and post it publicly via TikTok web. DO NOT EDIT the video after optimizing. Upload it as is.</div>
       </div>
-
-      <p class="faq-support">Any issues or bug? Report to us in Discord. <a class="faq-support-link" data-discord-link href="#">Join here</a></p>
     </section>
 
   </section>
@@ -711,7 +683,7 @@
     <header class="page-hero container">
       <div class="hero-badge"><i></i>JOHN_QUALITY · Engine v2</div>
       <h1>Choose Your Tier<span>.</span></h1>
-      <p class="hero-sub">All tiers use the same engine. Everything is Unlimited. Tier syncs automatically from your Discord roles.</p>
+      <p class="hero-sub">All tiers are Unlimited. Every feature unlocked for every user.</p>
     </header>
 
     <main class="container">
@@ -721,7 +693,7 @@
           <div class="tier-card" data-tier="member">
             <span class="tier-key">MEMBER</span>
             <div class="tier-name">Free</div>
-            <div class="tier-sub">Join the server</div>
+            <div class="tier-sub">Sign in with Google</div>
             <div class="tier-feats">
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
@@ -730,16 +702,13 @@
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0</div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg>Topaz preset</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Handbrake preset</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg>Colour correction preset</div>
             </div>
-            <a class="tier-btn" data-discord-link href="#">Join server</a>
+            <a class="tier-btn" href="/login">Sign in</a>
           </div>
           <div class="tier-card" data-tier="booster">
             <span class="tier-key">BOOSTER</span>
             <div class="tier-name">Booster</div>
-            <div class="tier-sub">Join the server</div>
+            <div class="tier-sub">All features unlocked</div>
             <div class="tier-feats">
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><b>Unlimited</b> file size</div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><b>4K</b> max resolution</div>
@@ -748,11 +717,8 @@
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0</div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg>Topaz preset</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Handbrake preset</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg>Colour correction preset</div>
             </div>
-            <a class="tier-btn" data-discord-link href="#">Join server</a>
+            <a class="tier-btn" href="/login">Sign in</a>
           </div>
           <div class="tier-card featured" data-tier="donor">
             <span class="rec-chip">Best value</span>
@@ -765,20 +731,17 @@
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 21a6 6 0 1 1 6-6"/><line x1="12" y1="12" x2="15.5" y2="8.5"/></svg><b>120 FPS</b> max framerate</div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M3 21h18"/></svg><b>Unlimited</b> uploads</div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><b>JOHN_QUALITY Engine</b> 2.0 + priority</div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b> skip FPS check</div>
+              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><b>Priority queue</b></div>
               <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><b>Fast Processing</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><polygon points="12 2 15.5 8.5 22 12 15.5 15.5 12 22 8.5 15.5 2 12 8.5 8.5 12 2"/></svg><b>Topaz preset</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg><b>Handbrake preset</b></div>
-              <div class="feat"><svg class="f-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20c1.7 0 2.5-1.3 2.5-2.5 0-.7-.3-1.3-.8-1.8-.5-.5-.8-1.1-.8-1.8 0-1.4 1.1-2.5 2.5-2.5h2.6c2.4 0 4.4-1.9 4.4-4.3A10.9 10.9 0 0 0 12 2z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg><b>Colour correction preset</b></div>
             </div>
-            <a class="tier-btn" data-discord-link href="#">Join</a>
+            <a class="tier-btn" href="/login">Sign in</a>
           </div>
         </div>
 
         <div style="text-align:center;">
-          <button class="tier-cta" id="tier-cta" data-login data-discord>Login</button>
+          <a class="tier-cta" href="/login">Sign in with Google</a>
         </div>
-        <p class="tier-note">Everything is Unlimited for all users. No license keys needed.</p>
+        <p class="tier-note">Everything is Unlimited for all signed-in users. No license keys needed.</p>
       </section>
 
       <section class="section reveal" style="--d:.15s">
@@ -802,16 +765,11 @@
               <tr><td>Engine access</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td></tr>
               <tr><td>Dashboard</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td></tr>
               <tr><td>Analytics tools</td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center yes">✓</td></tr>
-              <tr><td>Priority support</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
-              <tr><td>Fast Processing</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
-<tr><td>Topaz preset</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
-              <tr><td>Handbrake preset</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
-              <tr><td>Colour correction preset</td><td class="center no">✕</td><td class="center no">✕</td><td class="center yes">✓</td></tr>
               <tr class="compare-cta">
                 <td></td>
-                <td class="center"><a class="tier-btn" data-discord-link href="#">Join server</a></td>
-                <td class="center"><a class="tier-btn" data-discord-link href="#">Join server</a></td>
-                <td class="center"><a class="tier-btn" data-discord-link href="#">Join</a></td>
+                <td class="center"><a class="tier-btn" href="/login">Sign in</a></td>
+                <td class="center"><a class="tier-btn" href="/login">Sign in</a></td>
+                <td class="center"><a class="tier-btn" href="/login">Sign in</a></td>
               </tr>
             </tbody>
           </table>
@@ -822,21 +780,12 @@
 
   </section>
 
-  <!-- Support CTA — right above the socials -->
-  <section class="socials-section">
-    <h2 class="socials-title">Any issues? Contact us</h2>
-    <div class="socials-row" style="display:flex;justify-content:center;">
-      <a class="social-btn" href="https://discord.gg/ApzyyrNupd" target="_blank" rel="noopener" aria-label="Open a Support Ticket" style="width:auto;min-width:260px;background:#5865F2;border-color:#5865F2;"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>Open a Support Ticket</a>
-    </div>
-  </section>
-
-  <!-- Socials -->
+  <!-- Support CTA -->
   <section class="socials-section">
     <h2 class="socials-title">Follow JOHN_QUALITY</h2>
     <div class="socials-row">
       <a class="social-btn" href="https://www.tiktok.com/@john_quality" target="_blank" rel="noopener" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>TikTok</a>
       <a class="social-btn" href="https://www.youtube.com/@JOHN_QUALITY" target="_blank" rel="noopener" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="#FF0000" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>YouTube</a>
-      <a class="social-btn" href="https://discord.gg/ApzyyrNupd" target="_blank" rel="noopener" aria-label="Discord"><svg viewBox="0 0 24 24" fill="#5865F2" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>Discord</a>
       <a class="social-btn" href="https://t.me/JOHN_QUALITYYT" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" fill="#26A5E4" aria-hidden="true"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>Telegram</a>
       <a class="social-btn" href="https://instagram.com/john_qualityyt" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="#E4405F" aria-hidden="true"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.36 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg>Instagram</a>
       <a class="social-btn" href="https://whatsapp.com/channel/0029VbBxGFU7tkjF41GNon0u" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="#25D366" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>WhatsApp</a>
@@ -900,8 +849,8 @@
     <div class="login-card" id="google-login-card">
       <h1>Sign in with Google</h1>
       <p>Sign in to start optimizing videos. Your files stay private.</p>
-      <button class="btn" id="google-signin-btn" type="button">
-        <svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:-4px;margin-right:8px;">
+      <button class="btn-google" id="google-signin-btn" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -937,13 +886,11 @@
     <div class="footer-cols-2">
       <div class="footer-col">
         <h4>Community</h4>
-        <a data-discord-link href="#">Discord</a>
         <a href="https://t.me/JOHN_QUALITYYT" target="_blank" rel="noopener">Telegram</a>
-        <a data-discord-link href="#">Support us</a>
+        <a href="https://www.youtube.com/@JOHN_QUALITY" target="_blank" rel="noopener">YouTube</a>
       </div>
       <div class="footer-col">
         <h4>Socials</h4>
-        <a href="https://www.youtube.com/@JOHN_QUALITY" target="_blank" rel="noopener">YouTube</a>
         <a href="https://www.tiktok.com/@john_quality" target="_blank" rel="noopener">TikTok</a>
         <a href="https://instagram.com/john_qualityyt" target="_blank" rel="noopener">Instagram</a>
         <a href="https://whatsapp.com/channel/0029VbBxGFU7tkjF41GNon0u" target="_blank" rel="noopener">WhatsApp</a>
@@ -962,8 +909,6 @@
       <a href="/">JOHN_QUALITY TikTok method</a>
       <a href="/">How to upload in TikTok with 4K quality</a>
       <a href="/">How to upload in TikTok without compression</a>
-      <a href="/">Editing news TikTok method</a>
-      <a href="/">Editing news quality upload</a>
       <a href="/">JOHN_QUALITY Method</a>
     </div>
   </div>
@@ -985,9 +930,6 @@
 
 <script>
   (function () {
-    var inv = (window.RTX && window.RTX.DISCORD_INVITE) || "#";
-    var prem = (window.RTX && window.RTX.DISCORD_PREMIUM_CHANNEL) || "https://discord.com/channels/1396835411510300780/1538322900560511066";
-    document.querySelectorAll("[data-discord-link]").forEach(function (a) { a.href = a.textContent.trim().toLowerCase() === "donate" ? prem : inv; a.target = "_blank"; });
     document.querySelectorAll(".faq-q").forEach(function (btn) {
       btn.addEventListener("click", function () { btn.parentElement.classList.toggle("open"); });
     });
