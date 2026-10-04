@@ -1,9 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    JOHN_QUALITY — shared.js · all pages
-   Talks to the local API (/api/*). Falls back to demo data when the
-   server is unreachable (e.g. standalone files opened directly).
-   Analytics = TikTok Analyzer (same tools/shapes as Zilem):
-   Check / Best Time / Hashtags / Recap / Compare / Tag.
+   Google Sign-In (Firebase) · Unlimited · No Discord/Telegram
    ═══════════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
@@ -20,23 +17,17 @@
   };
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  /* JOHN_QUALITY: ALL TIERS UNLIMITED — every tier is Premium-equivalent. */
+  /* JOHN_QUALITY: ALL TIERS UNLIMITED */
   const TIER_MAP = { member: ["Free", 0, "4K120", 120], booster: ["Booster", 0, "4K120", 120], donor: ["Premium", 0, "4K120", 120] };
-  /* JOHN_QUALITY: NO file-size cap at all. */
   const PREMIUM_MAX_MB = 999999;
-  /* Cloudflare refuses any single request body over 100 MB with a 413 AT THE
-     EDGE, before the origin ever sees it. Kept as a transport limit only. */
   const CF_ONE_SHOT_MAX = 90 * 1024 * 1024;
-  /* JOHN_QUALITY: NO daily upload limit at all. */
   const PATCH_LIMIT = { member: null, booster: null, donor: null };
-  /* JOHN_QUALITY: NO resolution or FPS caps — everything is unlimited. */
   const TIER_RES = {
     member:  { resLong: 99999, resShort: 99999, maxFPS: 9999 },
     booster: { resLong: 99999, resShort: 99999, maxFPS: 9999, hiFPS: 9999, hiResLong: 99999, hiResShort: 99999 },
     donor:   { resLong: 99999, resShort: 99999, maxFPS: 9999 },
   };
-  /* Accept both the local server shape ({user, admin}) and the Vercel/discord.ts
-     shape ({logged_in, tier, limit_mb, display_name, avatar_url}). */
+
   function normalizeMe(j) {
     if (!j) return { user: null, admin: false };
     if (j.user) {
@@ -49,34 +40,30 @@
     if (!j.logged_in) return { user: null, admin: false };
     const t = j.tier || "member";
     const [label, mb, res, fps] = TIER_MAP[t] || TIER_MAP.member;
-    return { user: { username: j.username || j.display_name || "USER", display_name: j.display_name, avatar: j.avatar_url || j.avatar || null, tier: { tier: t, tierLabel: label, tierMB: mb, tierRes: res, tierFPS: fps } }, admin: false };
+    return {
+      user: {
+        username: j.username || j.display_name || "USER",
+        display_name: j.display_name,
+        avatar: j.avatar_url || j.avatar || null,
+        tier: { tier: t, tierLabel: label, tierMB: mb, tierRes: res, tierFPS: fps },
+      },
+      admin: false,
+    };
   }
 
-
-  /* Session-persistent cache: page switches re-run /api/stats and /api/health,
-     so we cache the last good response and render instantly instead of
-     showing a logged-out/loading state while waiting. /api/me is deliberately
-     NOT cached — it's auth state, and a stale "logged out" cache entry would
-     survive the OAuth round-trip (sessionStorage persists across navigation)
-     and keep the UI logged out after a successful login. */
+  /* ── Session cache ─────────────────────────────────────────── */
   const GET_CACHE = { "/api/stats": 60e3, "/api/health": 120e3 };
   function cacheRead(k) {
-    try {
-      const raw = sessionStorage.getItem("rtxcache:" + k);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch { return null; }
+    try { const raw = sessionStorage.getItem("jqcache:" + k); if (!raw) return null; return JSON.parse(raw); }
+    catch { return null; }
   }
   function cacheHit(k) {
     const e = cacheRead(k);
     return e && (Date.now() - e.t < GET_CACHE[k]) ? e.v : null;
   }
-  function cacheStale(k) {
-    const e = cacheRead(k);
-    return e ? e.v : null;
-  }
+  function cacheStale(k) { const e = cacheRead(k); return e ? e.v : null; }
   function cacheWrite(k, v) {
-    try { sessionStorage.setItem("rtxcache:" + k, JSON.stringify({ t: Date.now(), v })); } catch {}
+    try { sessionStorage.setItem("jqcache:" + k, JSON.stringify({ t: Date.now(), v })); } catch {}
   }
 
   async function api(path, opts) {
@@ -84,6 +71,13 @@
     const cacheable = method === "GET" && !(opts && opts.cache === "no-store") && GET_CACHE[path];
     if (cacheable) { const hit = cacheHit(path); if (hit) return hit; }
     try {
+      // Always send the session JWT if we have one
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      const sess = localStorage.getItem("jq_session");
+      if (sess && !opts.headers.Authorization) {
+        opts.headers.Authorization = "Bearer " + sess;
+      }
       const r = await fetch(path, opts);
       const ct = r.headers.get("content-type") || "";
       if (ct.includes("json")) {
@@ -100,7 +94,7 @@
     }
   }
 
-  /* ── shared UI ──────────────────────────────────────────────── */
+  /* ── Shared UI ─────────────────────────────────────────────── */
   function initReveal() {
     const els = $$(".reveal");
     if (!("IntersectionObserver" in window)) return els.forEach((e) => e.classList.add("in"));
@@ -118,97 +112,73 @@
   function setUsagePill(user) {
     const pill = $("#nav-usage");
     if (!pill) return;
-    // JOHN_QUALITY: everything is Unlimited — no daily counters shown.
     pill.innerHTML = "<b>Unlimited</b>";
   }
+
   function renderAuth(user, devMode) {
-    const login = $("#btn-login"), dev = $("#btn-dev"), logout = $("#btn-logout"), chip = $("#nav-user");
-    const useDev = !!(dev && devMode && !API_DISCORD);
+    const logout = $("#btn-logout"), chip = $("#nav-user");
     if (logout) {
       logout.style.display = user ? "inline-flex" : "none";
-      logout.onclick = async () => { await api("/api/logout", { method: "POST" }); location.href = "/"; };
+      logout.onclick = async () => { await signOutGoogle(); };
     }
     if (user) {
-      if (login) login.style.display = "none";
-      if (dev) dev.style.display = "none";
       if (chip) {
         chip.style.display = "inline-flex";
         chip.innerHTML =
           (user.avatar ? '<img class="nav-avatar" src="' + esc(user.avatar) + '" alt=""/>' : "") +
           '<span class="nav-user-name" id="nav-user-name"></span>' +
           '<span class="nav-user-tier" id="nav-user-tier"></span>';
-        $("#nav-user-name").textContent = user.username || "USER";
-        $("#nav-user-tier").textContent = ((user.tier && user.tier.tierLabel) || "Guest").toUpperCase();
+        const nameEl = $("#nav-user-name");
+        const tierEl = $("#nav-user-tier");
+        if (nameEl) nameEl.textContent = user.username || "USER";
+        if (tierEl) tierEl.textContent = ((user.tier && user.tier.tierLabel) || "Premium").toUpperCase();
       }
     } else {
-      if (login) login.style.display = "none";
-      if (dev) dev.style.display = "none";
       if (chip) chip.style.display = "none";
     }
+
     const hl = $("#hero-login");
     if (hl) {
       if (user) { hl.style.display = "none"; hl.innerHTML = ""; }
       else {
         hl.style.display = "";
-        if (useDev) {
-          hl.innerHTML = '<button class="btn btn-discord" id="devLoginBtn">Dev Login</button>';
-          const d = $("#devLoginBtn");
-          if (d) d.onclick = async () => { const r = await api("/api/login/dev", { method: "POST" }); if (r && r.ok) location.reload(); };
-        } else {
-          hl.innerHTML =
-            '<div class="login-choices">' +
-            '<a class="btn btn-discord" href="/login" data-login>' + DISCORD_SVG + 'Login with Discord</a>' +
-            '<button class="btn btn-tg" type="button" id="hero-login-tg">' + TELEGRAM_SVG + 'Login with Telegram</button>' +
-            '</div>';
-          startTelegramLogin($("#hero-login-tg"));
-        }
+        hl.innerHTML =
+          '<div class="login-choices">' +
+          '<button class="btn btn-google" type="button" id="hero-google-login">' + GOOGLE_SVG + 'Sign in with Google</button>' +
+          '</div>';
+        const btn = $("#hero-google-login");
+        if (btn) btn.onclick = signInWithGoogle;
       }
     }
+
     const bn = $("#bn-login");
     if (bn) {
       if (user) {
         bn.style.display = "none";
-        bn.classList.remove("active");
       } else {
         bn.style.display = "flex";
-        bn.innerHTML = DISCORD_SVG + "<span>Login</span>";
-        bn.setAttribute("data-login", "");
-        bn.setAttribute("data-discord", "");
-        bn.href = "#/login";
-        bn.classList.remove("active");
+        bn.innerHTML = GOOGLE_SVG + "<span>Login</span>";
+        bn.onclick = (e) => { e.preventDefault(); signInWithGoogle(); };
       }
     }
-    if (bn) {
-      let bnTg = $("#bn-login-tg");
-      if (!bnTg) {
-        bn.insertAdjacentHTML("afterend",
-          '<a class="bn-item bn-item-tg" id="bn-login-tg" href="#" role="button"><span>Login</span></a>');
-        bnTg = $("#bn-login-tg");
-      }
-      if (bnTg) {
-        const tgVisible = !user;
-        bnTg.style.display = tgVisible ? "flex" : "none";
-        if (tgVisible) {
-          bnTg.innerHTML = TELEGRAM_SVG + "<span>Login</span>";
-          if (!bnTg.dataset.wired) { bnTg.dataset.wired = "1"; startTelegramLogin(bnTg); }
-        }
-      }
-    }
+
     const bnLo = $("#bn-logout");
     if (bnLo) {
       bnLo.style.display = user ? "flex" : "none";
-      bnLo.onclick = async (ev) => { ev.preventDefault(); await api("/api/logout", { method: "POST" }); clearCachedAuth(); location.href = "/"; };
+      bnLo.onclick = async (ev) => { ev.preventDefault(); await signOutGoogle(); };
     }
+
     setUsagePill(user);
   }
 
+  /* ── Dashboard ─────────────────────────────────────────────── */
   function initDashboard() {
     const cmp = $("#cmp");
     if (cmp) initCompare(cmp);
     initCompareVideo();
 
     loadAuthState().then((user) => {
-      renderAuth(user, AUTH_DEV);
+      renderAuth(user, false);
       if (user) { renderTier(user.tier, user.username, AUTH_ME_RAW); }
       else {
         const chip = $("#welcome-chip");
@@ -268,7 +238,6 @@
   }
 
   function renderTier(t, username, me) {
-    // JOHN_QUALITY: every tier is shown as the unlimited Premium tier.
     if ($("#tier-user")) $("#tier-user").textContent = username || "USER";
     if ($("#tier-name2")) $("#tier-name2").textContent = "PREMIUM";
     if ($("#tier-mb")) $("#tier-mb").textContent = "Unlimited";
@@ -282,23 +251,6 @@
     }
   }
 
-  /* ── Tier CTAs ──────────────────────────────── */
-  const TIER_CTA_LABEL = { member: "Join server", booster: "Join server", donor: "Join" };
-  const CTA_TIER = { "join server": "member", "boost server": "booster", "donate": "donor", "join": "donor" };
-  function renderTierCtas(tierKey) {
-    $$(".tier-btn").forEach((b) => {
-      if (!b.dataset.baseLabel) b.dataset.baseLabel = (b.textContent || "").trim();
-      const card = b.closest("[data-tier]");
-      const key = (card && card.dataset.tier) || CTA_TIER[b.dataset.baseLabel.toLowerCase()] || null;
-      if (!key) return;
-      const mine = !!tierKey && key === tierKey;
-      b.textContent = mine ? "Activated" : b.dataset.baseLabel;
-      b.classList.toggle("activated", mine);
-      if (mine) { b.setAttribute("aria-disabled", "true"); b.setAttribute("tabindex", "-1"); }
-      else { b.removeAttribute("aria-disabled"); b.removeAttribute("tabindex"); }
-    });
-  }
-
   function timeAgo(ts) {
     const s = Math.floor((Date.now() - ts) / 1000);
     if (s < 60) return s + "S AGO";
@@ -307,6 +259,7 @@
     return Math.floor(s / 86400) + "D AGO";
   }
 
+  /* ── Compare slider ────────────────────────────────────────── */
   function initCompare(cmp) {
     const handle = $("#cmp-hand");
     const setPos = (p) => { p = Math.max(0, Math.min(100, p)); cmp.style.setProperty("--pos", p + "%"); if (handle) handle.setAttribute("aria-valuenow", Math.round(p)); };
@@ -328,30 +281,23 @@
     const hq = (window.RTX && window.RTX.VIDEO_HQ) || "";
     const lq = (window.RTX && window.RTX.VIDEO_LQ) || "";
     if (!hq || !lq) return;
-
     function fail(v) { v.classList.remove("on"); }
-    va.preload = "auto";
-    vb.preload = "auto";
-    va.src = lq;
-    vb.src = hq;
-    va.classList.add("on");
-    vb.classList.add("on");
+    va.preload = "auto"; vb.preload = "auto";
+    va.src = lq; vb.src = hq;
+    va.classList.add("on"); vb.classList.add("on");
     va.addEventListener("error", () => fail(va));
     vb.addEventListener("error", () => fail(vb));
-
-    let started = false, raf = 0;
-
+    let started = false;
     function tryStart() {
       if (started || va.readyState < 1 || vb.readyState < 1) return;
       started = true;
       try { va.currentTime = 0; vb.currentTime = 0; } catch (e) {}
       va.play().catch(() => {});
       vb.play().catch(() => {});
-      raf = requestAnimationFrame(tick);
+      requestAnimationFrame(tick);
     }
     va.addEventListener("loadedmetadata", tryStart);
     vb.addEventListener("loadedmetadata", tryStart);
-
     function tick() {
       const dt = va.currentTime - vb.currentTime;
       if (Math.abs(dt) > 0.12) {
@@ -366,10 +312,11 @@
         if (va.paused && !vb.paused && !va.ended) va.play().catch(() => {});
         if (vb.paused && !va.paused && !vb.ended) vb.play().catch(() => {});
       }
-      raf = requestAnimationFrame(tick);
+      requestAnimationFrame(tick);
     }
   }
 
+  /* ── Video metadata scan ───────────────────────────────────── */
   function readVideoMeta(file) {
     return new Promise((resolve) => {
       let settled = false;
@@ -431,7 +378,6 @@
   async function parseMP4Boxes(file) {
     const u32 = (b, o) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;
     const t4 = (b, o) => String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
-
     const boxList = (b, start, end) => {
       const out = [];
       let p = start;
@@ -523,6 +469,7 @@
     return null;
   }
 
+  /* ── Console ────────────────────────────────────────────────── */
   function procLog(msg, cls) {
     const log = $("#procLog");
     if (!log) return;
@@ -532,7 +479,6 @@
     log.appendChild(line);
     log.scrollTop = log.scrollHeight;
   }
-
   function procLogDl(msg) {
     const log = $("#procLog");
     if (!log) return;
@@ -558,29 +504,21 @@
     if (n >= 1024) return (n / 1024).toFixed(0) + " KB";
     return n + " B";
   }
-  function fmtSpeed(bps) {
-    if (bps >= 1048576) return (bps / 1048576).toFixed(1) + " MB/s";
-    return (bps / 1024).toFixed(0) + " KB/s";
-  }
-  function fmtEta(secs) {
-    if (!Number.isFinite(secs) || secs <= 0) return "";
-    return secs >= 60 ? Math.ceil(secs / 60) + "m" : Math.ceil(secs) + "s";
-  }
 
   function rtxNewJobKey() {
-    try {
-      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    } catch (e) {}
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
     return String(Date.now()) + "-" + Math.random().toString(36).slice(2);
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+     PATCHER
+     ═══════════════════════════════════════════════════════════════ */
   function initPatcher() {
     const input = $("#fileInput"), zone = $("#dropZone"), runBtn = $("#runBtn"), dlBtn = $("#dlBtn"), clearBtn = $("#clearBtn");
     const againBtn = $("#againBtn");
     const AGAIN_LABEL = againBtn ? againBtn.textContent : "";
     if (!input || !zone) return;
 
-    // JOHN_QUALITY: tier caps are unlimited; limitMB is 0 = unlimited.
     let file = null, objectUrl = null, timers = [], abortCtrl = null, activeXhr = null, jobKey = "", limitMB = 0, tierLabel = "PREMIUM", apiLive = true, devMode = false, loggedIn = null, patchedName = "", tierKey = "donor", discordId = "", lastScan = null, lastHealth = "", probeBlocked = "";
     const UPLOAD_MAX = 45;
     const DL_FROM = 80;
@@ -640,7 +578,7 @@
 
     async function rtxItsScale(blob, t0, t1) {
       let on = false;
-      try { on = localStorage.getItem("rtx_engine") === "ffmpeg"; } catch (e) { on = false; }
+      try { on = localStorage.getItem("john_quality_engine") === "ffmpeg" || localStorage.getItem("rtx_engine") === "ffmpeg"; } catch (e) { on = false; }
       if (!on) return blob;
       if (!window.RTXLocalConvert || !window.RTXLocalConvert.itsScale) return blob;
       try {
@@ -683,8 +621,8 @@
       if (pct >= animBand) pct = Math.max(UPLOAD_MAX, animBand - 0.1);
       slowMsgShown1 = false;
       finalizeTimer = setInterval(() => {
-         animBand = Math.min(DL_FROM - 0.2, animBand + 0.035);
-         pct = Math.min(animBand - 0.05, pct + Math.max(0.045, (animBand - pct) * 0.07));
+        animBand = Math.min(DL_FROM - 0.2, animBand + 0.035);
+        pct = Math.min(animBand - 0.05, pct + Math.max(0.045, (animBand - pct) * 0.07));
         if (pct >= 55.5 && !slowMsgShown1) {
           slowMsgShown1 = true;
           procLog(lastFileHevc ? "Optimizing your H265 (HEVC) file — applying the TikTok-safe settings. Tip: H.264 files process faster."
@@ -696,22 +634,22 @@
       }, 60);
     }
 
+    /* ── Auth check → set loggedIn state ─────────────────────── */
     loadAuthState().then((user) => {
       const me = AUTH_ME_RAW;
-      apiLive = API_DISCORD;
-      devMode = AUTH_DEV;
-      renderAuth(user, AUTH_DEV);
+      apiLive = true;
+      devMode = false;
+      renderAuth(user, false);
       loggedIn = user ? true : false;
       if (user) {
-        tierKey = user.tier.tier;
+        tierKey = (user.tier && user.tier.tier) || "donor";
         discordId = (me && me.discord_id) || "";
-        // JOHN_QUALITY: every tier is unlimited — limitMB 0 disables all caps.
         limitMB = 0;
         tierLabel = "PREMIUM";
         setLimit(0);
         setUsagePill(user);
         const lbl = $("#usage-tier-label"), cnt = $("#usage-count"), av = $("#usage-avatar");
-        if (lbl) lbl.textContent = user.username;
+        if (lbl) lbl.textContent = user.username || "User";
         if (cnt) cnt.textContent = "Unlimited";
         if (av) {
           if (user.avatar) av.innerHTML = '<img src="' + esc(user.avatar) + '" alt=""/>';
@@ -720,6 +658,7 @@
       }
     });
 
+    // Refresh auth periodically (e.g. token renewal)
     setInterval(() => {
       if (loggedIn !== true) return;
       api("/api/me").then((m) => {
@@ -730,16 +669,12 @@
 
     const scan = { size: $("#sv-size"), res: $("#sv-res"), dur: $("#sv-dur"), health: $("#sv-health") };
     const gateState = { over: false, meta: null, caps: {} };
-    function applyGateFromBox() {
-      // JOHN_QUALITY: nothing blocks the Optimize button — everything is unlimited.
-      runBtn.disabled = false;
-      scan.health.textContent = "READY TO OPTIMIZE";
-      scan.health.style.color = "var(--green)";
-    }
-    const setLimit = (used) => {
-      // JOHN_QUALITY: always unlimited.
-      $("#limitFill").style.width = "100%";
-      $("#limitText").textContent = "Unlimited · PREMIUM";
+
+    const setLimit = () => {
+      const fill = $("#limitFill");
+      const txt = $("#limitText");
+      if (fill) fill.style.width = "100%";
+      if (txt) txt.textContent = "Unlimited · PREMIUM";
     };
 
     function resetTimers() { timers.forEach(clearTimeout); timers = []; }
@@ -750,45 +685,53 @@
       stopFinalizeAnim();
       rtxCeilStop();
       rtxCeilReset(0);
-      $("#processingView").style.display = "none";
-      $("#dropZoneWrap").style.display = "";
-      $("#scanView").classList.remove("show");
-      $("#progressFill").style.width = "0";
-      $("#progressPct").textContent = "0%";
+      const pv = $("#processingView");
+      if (pv) pv.style.display = "none";
+      const dz = $("#dropZoneWrap");
+      if (dz) dz.style.display = "";
+      const sv = $("#scanView");
+      if (sv) sv.classList.remove("show");
+      const pf = $("#progressFill");
+      if (pf) pf.style.width = "0";
+      const pp = $("#progressPct");
+      if (pp) pp.textContent = "0%";
       _barHigh = 0;
       dlFloor = null;
       window.__rtxCounted = false;
-      $("#progressStage").textContent = "Processing…";
-      $("#procStatus").textContent = "JOHN_QUALITY ENGINE v2.0";
-      $("#cancelBtn").style.display = "";
-      $("#dropZone").style.display = "";
-      runBtn.style.display = "";
-      runBtn.disabled = false;
-      dlBtn.style.display = "none"; dlBtn.disabled = true;
-      clearBtn.style.display = "none";
+      const ps = $("#progressStage");
+      if (ps) ps.textContent = "Processing…";
+      const prs = $("#procStatus");
+      if (prs) prs.textContent = "JOHN_QUALITY ENGINE v2.0";
+      const cb = $("#cancelBtn");
+      if (cb) cb.style.display = "";
+      const dzc = $("#dropZone");
+      if (dzc) dzc.style.display = "";
+      if (runBtn) { runBtn.style.display = ""; runBtn.disabled = false; }
+      if (dlBtn) { dlBtn.style.display = "none"; dlBtn.disabled = true; }
+      if (clearBtn) clearBtn.style.display = "none";
       if (againBtn) againBtn.style.display = "none";
-      setLimit(0);
+      setLimit();
     }
 
     zone.addEventListener("click", () => {
-      if (loggedIn === false) { requireLogin(); return; }
+      if (loggedIn === false) { signInWithGoogle(); return; }
       input.click();
     });
     input.addEventListener("change", async () => {
-      if (loggedIn === false) { requireLogin(); input.value = ""; return; }
+      if (loggedIn === false) { signInWithGoogle(); input.value = ""; return; }
       if (loggedIn === null) {
         const user = await loadAuthState();
-        if (!user) { requireLogin(); input.value = ""; return; }
+        if (!user) { signInWithGoogle(); input.value = ""; return; }
       }
       if (input.files[0]) handleFile(input.files[0]);
     });
     ["dragenter", "dragover"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add("drag"); }));
     ["dragleave", "drop"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove("drag"); }));
     zone.addEventListener("drop", async (e) => {
-      if (loggedIn === false) { requireLogin(); return; }
+      if (loggedIn === false) { signInWithGoogle(); return; }
       if (loggedIn === null) {
         const user = await loadAuthState();
-        if (!user) { requireLogin(); return; }
+        if (!user) { signInWithGoogle(); return; }
       }
       if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
     });
@@ -798,67 +741,68 @@
     file = f;
     objectUrl = URL.createObjectURL(f);
     const sizeMB = f.size / (1024 * 1024);
-      scan.size.textContent = sizeMB.toFixed(1) + " MB";
-      scan.res.textContent = "SCANNING…"; scan.dur.textContent = "SCANNING…";
-      scan.health.textContent = "SCANNING…"; scan.health.style.color = "var(--text-3)";
-      setLimit(sizeMB);
-      $("#scanView").classList.add("show");
-      probeBlocked = "";
-      // JOHN_QUALITY: no size cap — always enabled.
-      runBtn.disabled = false;
+    if (scan.size) scan.size.textContent = sizeMB.toFixed(1) + " MB";
+    if (scan.res) scan.res.textContent = "SCANNING…";
+    if (scan.dur) scan.dur.textContent = "SCANNING…";
+    if (scan.health) { scan.health.textContent = "SCANNING…"; scan.health.style.color = "var(--text-3)"; }
+    setLimit();
+    const sv = $("#scanView");
+    if (sv) sv.classList.add("show");
+    probeBlocked = "";
+    if (runBtn) runBtn.disabled = false;
 
-      // Probe for track validity only (no audio/video track still blocked)
-      try {
-        if (window.RTXLocal && window.RTXLocal.probe) {
-          window.RTXLocal.probe(f).then(function (pr) {
-            if (!pr || pr.ok) return;
-            const _why = String(pr.reason || "");
-            if (/No audio track|No video track/i.test(_why)) {
-              probeBlocked = _why;
-              runBtn.disabled = true;
+    try {
+      if (window.RTXLocal && window.RTXLocal.probe) {
+        window.RTXLocal.probe(f).then(function (pr) {
+          if (!pr || pr.ok) return;
+          const _why = String(pr.reason || "");
+          if (/No audio track|No video track/i.test(_why)) {
+            probeBlocked = _why;
+            if (runBtn) runBtn.disabled = true;
+            if (scan.health) {
               scan.health.textContent = /No audio track/i.test(_why) ? "NO SOUND TRACK" : "NO VIDEO TRACK";
               scan.health.style.color = "var(--red)";
-              lastHealth = scan.health.textContent;
-              procLog("Cannot optimize this file - " + _why, "err");
-            } else {
-              procLog("This file will need converting first: " + _why, "mut");
             }
-          }).catch(function () {});
-        }
-      } catch (e) {}
+            lastHealth = scan.health ? scan.health.textContent : "";
+            procLog("Cannot optimize this file - " + _why, "err");
+          } else {
+            procLog("This file will need converting first: " + _why, "mut");
+          }
+        }).catch(function () {});
+      }
+    } catch (e) {}
 
-      // Resolution / duration / FPS scan — informational only now.
-      lastScan = null; lastHealth = "";
-      readVideoMeta(f).then((meta) => {
-        lastScan = meta || null;
-        if (!meta) {
-          scan.res.textContent = "UNKNOWN"; scan.dur.textContent = "UNKNOWN";
-          scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)";
-          lastHealth = "READY TO OPTIMIZE";
-          return;
-        }
-        if (meta.w > 0 && meta.h > 0) {
-          scan.res.textContent = meta.w + "×" + meta.h + (meta.codec === "hevc" ? " · H265 (HEVC)" : "");
-        } else scan.res.textContent = "UNKNOWN";
-        if (meta.codec === "hevc") {
-          procLog("H265 (HEVC) detected. Optimising now. Tip: H.264 files are recommended.", "ok");
-        }
+    lastScan = null; lastHealth = "";
+    readVideoMeta(f).then((meta) => {
+      lastScan = meta || null;
+      if (!meta) {
+        if (scan.res) scan.res.textContent = "UNKNOWN";
+        if (scan.dur) scan.dur.textContent = "UNKNOWN";
+        if (scan.health) { scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)"; }
+        lastHealth = "READY TO OPTIMIZE";
+        return;
+      }
+      if (meta.w > 0 && meta.h > 0) {
+        if (scan.res) scan.res.textContent = meta.w + "×" + meta.h + (meta.codec === "hevc" ? " · H265 (HEVC)" : "");
+      } else if (scan.res) scan.res.textContent = "UNKNOWN";
+      if (meta.codec === "hevc") {
+        procLog("H265 (HEVC) detected. Optimising now. Tip: H.264 files are recommended.", "ok");
+      }
+      if (scan.dur) {
         if (meta.dur > 0) scan.dur.textContent = Math.floor(meta.dur / 60) + ":" + String(Math.floor(meta.dur % 60)).padStart(2, "0");
         else scan.dur.textContent = "UNKNOWN";
-
-        // JOHN_QUALITY: no res/fps caps. Only a missing track blocks the run.
-        const blocked = !!probeBlocked;
-        runBtn.disabled = blocked;
-        gateState.over = false; gateState.meta = meta; gateState.caps = {};
-        if (blocked) {
-          scan.health.textContent = "CANNOT OPTIMIZE";
-          scan.health.style.color = "var(--red)";
-        } else {
-          scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)";
-          lastHealth = scan.health.textContent;
-        }
-      });
-    }
+      }
+      const blocked = !!probeBlocked;
+      if (runBtn) runBtn.disabled = blocked;
+      gateState.over = false; gateState.meta = meta; gateState.caps = {};
+      if (blocked) {
+        if (scan.health) { scan.health.textContent = "CANNOT OPTIMIZE"; scan.health.style.color = "var(--red)"; }
+      } else {
+        if (scan.health) { scan.health.textContent = "READY TO OPTIMIZE"; scan.health.style.color = "var(--green)"; }
+        lastHealth = "READY TO OPTIMIZE";
+      }
+    });
+  }
 
     function sniffVideoCodec(file) {
       return new Promise((resolve) => {
@@ -887,13 +831,12 @@
     function stopWarm() {}
 
     runBtn.addEventListener("click", async () => {
-      if (loggedIn === false) { requireLogin(); return; }
+      if (loggedIn === false) { signInWithGoogle(); return; }
       if (loggedIn === null) {
         const user = await loadAuthState();
-        if (!user) { requireLogin(); return; }
+        if (!user) { signInWithGoogle(); return; }
       }
       if (!file) { input.click(); return; }
-      // JOHN_QUALITY: no size caps at all — every file is accepted.
       const _h264Box = document.getElementById("h264Convert");
       if (_h264Box && _h264Box.checked) {
         try {
@@ -915,15 +858,15 @@
       rtxCeilStage(UPLOAD_MAX);
       rtxCeilStart();
       activeXhr = null;
-      $("#dropZoneWrap").style.display = "none";
-      $("#processingView").style.display = "block";
-      $("#progressFill").style.width = "0";
-      $("#progressPct").textContent = "0%";
+      const dz = $("#dropZoneWrap"); if (dz) dz.style.display = "none";
+      const pv = $("#processingView"); if (pv) pv.style.display = "block";
+      const pf = $("#progressFill"); if (pf) pf.style.width = "0";
+      const pp = $("#progressPct"); if (pp) pp.textContent = "0%";
       _barHigh = 0;
       dlFloor = null;
-      $("#progressStage").textContent = "Checking daily usage…";
-      $("#procStatus").textContent = "JOHN_QUALITY Engine v2 · CLOUD";
-      dlBtn.disabled = true;
+      const ps = $("#progressStage"); if (ps) ps.textContent = "Checking daily usage…";
+      const prs = $("#procStatus"); if (prs) prs.textContent = "JOHN_QUALITY Engine v2 · CLOUD";
+      if (dlBtn) dlBtn.disabled = true;
 
       const plog = $("#procLog");
       if (plog) plog.innerHTML = "";
@@ -943,7 +886,7 @@
 
       timers.push(setTimeout(async () => {
         try {
-          $("#progressStage").textContent = "Checking daily usage…";
+          $("#progressStage").textContent = "Authorizing…";
           const auth = await api("/api/authorize", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -982,689 +925,60 @@
           } catch (e) {}
           fd.append("patcher", "main");
           fd.append("file", file, file.name);
-          const PATCH_API = (window.RTX && window.RTX.PATCH_API_URL) || "";
-          const patchUrl = PATCH_API
-            ? PATCH_API.replace(/\/+$/, "") + "/api/patch-rtx"
-            : "/api/patch-rtx";
-          const tkId = String(tk.token || "").split(":")[1] || "";
+
+          const patchUrl = "/api/patch-rtx";
           const safeName = file.name.replace(/[^\x20-\x7E]/g, "_");
+          const sess = localStorage.getItem("jq_session") || "";
 
-          async function resumeDownload(id) {
-            try {
-              return await new Promise((resolve, reject) => {
-                const gx = new XMLHttpRequest();
-                gx.open("GET", patchUrl + "/job/" + id);
-                gx.responseType = "blob";
-                gx.setRequestHeader("X-Patch-Token", tk.token);
-                if (tkId) gx.setRequestHeader("X-Discord-Id", tkId);
-                gx.onload = () => {
-                  if (gx.status >= 200 && gx.status < 300) resolve(gx.response);
-                  else reject(new Error("resume failed"));
-                };
-                gx.onerror = () => reject(new Error("resume network"));
-                gx.onabort = () => reject(new Error("resume aborted"));
-                gx.onprogress = (ev) => {
-                  if (ev.lengthComputable && ev.total > 0) {
-                    const pct = dlProgress(ev.loaded, ev.total);
-                    $("#progressFill").style.width = pct + "%";
-                    $("#progressPct").textContent = pct.toFixed(1) + "%";
-                    $("#progressStage").textContent = "Downloading " + fmtBytes(ev.loaded) + " / " + fmtBytes(ev.total);
-                  }
-                };
-                if (!finalizeTimer) startFinalizeAnim();
-                gx.send();
-              });
-            } catch (e) { return null; }
-          }
-
-          const RTX_PART_TRIES = 6;
-          const RTX_PART_STALL_MS = 30000;
-          function rtxEngineFfmpeg() {
-    try { return localStorage.getItem("john_quality_engine") === "ffmpeg" || localStorage.getItem("rtx_engine") === "ffmpeg"; } catch (e) { return false; }
-          }
-          function rtxWantsH264() {
-            const b = document.getElementById("h264Convert");
-            return !!(b && b.checked);
-          }
-          function rtxMintToken() {
-            return api("/api/authorize", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: "{}",
-            }).then(function (r) {
-              const d = r && r.json;
-              return d && d.ok && d.token ? d.token : null;
-            }).catch(function () { return null; });
-          }
-          const SLOT_CHECK_TIMEOUT_MS = 12000;
-          const SLOT_CHECK_TRIES = 3;
-          function rtxSlotAttempt(token, discordId, jobKey) {
-            return new Promise(function (resolve) {
-              try {
-                const x = new XMLHttpRequest();
-                x.open("POST", patchUrl + "/local-use");
-                x.setRequestHeader("X-Patch-Token", token);
-                if (discordId) x.setRequestHeader("X-Discord-Id", discordId);
-                if (jobKey) x.setRequestHeader("X-Job-Key", jobKey);
-                x.setRequestHeader("Content-Type", "application/json");
-                x.onload = function () {
-                  let d = {};
-                  try { d = JSON.parse(x.responseText || "{}"); } catch (e) {}
-                  if (x.status >= 200 && x.status < 300 && d.ok) {
-                    window.__rtxCounted = true;
-                    return resolve({ ok: true, used: d.used, limit: d.limit === undefined ? null : d.limit });
-                  }
-                  resolve({ ok: true, used: null, limit: null });
-                };
-                x.onerror = function () { resolve({ ok: true, used: null, limit: null }); };
-                x.ontimeout = function () { resolve({ ok: true, used: null, limit: null }); };
-                x.timeout = SLOT_CHECK_TIMEOUT_MS;
-                x.send("{}");
-              } catch (e) { resolve({ ok: true, used: null, limit: null }); }
-            });
-          }
-          function rtxLocalUse(token, discordId, jobKey) {
-            return (async function () {
-              for (let a = 1; a <= SLOT_CHECK_TRIES; a++) {
-                const r = await rtxSlotAttempt(token, discordId, jobKey);
-                if (r && r.ok) return r;
-                if (a < SLOT_CHECK_TRIES) await new Promise(function (z) { setTimeout(z, 800 * a); });
-              }
-              return { ok: true, used: null, limit: null };
-            })();
-          }
-          function rtxLocalRelease(token, discordId) {
-            window.__rtxCounted = false;
-            try {
-              const x = new XMLHttpRequest();
-              x.open("POST", patchUrl + "/local-release");
-              x.setRequestHeader("X-Patch-Token", token);
-              if (discordId) x.setRequestHeader("X-Discord-Id", discordId);
-              x.setRequestHeader("Content-Type", "application/json");
-              x.send("{}");
-            } catch (e) {}
-          }
-
-          function rtxPart(id, token, offset, total, blob, first) {
-            return new Promise(function (resolve, reject) {
-              const x = new XMLHttpRequest();
-              activeXhr = x;
-              x.open("POST", patchUrl + "/up/" + id);
-              x.setRequestHeader("X-Patch-Token", token);
-              if (tkId) x.setRequestHeader("X-Discord-Id", tkId);
-              x.setRequestHeader("X-Upload-Offset", String(offset));
-              x.setRequestHeader("X-Upload-Size", String(total));
-              x.setRequestHeader("X-Filename", safeName);
-              x.setRequestHeader("Content-Type", "application/octet-stream");
-              if (first && rtxWantsH264()) x.setRequestHeader("X-Convert-H264", "1");
-              let stallTimer = null;
-              function disarmStall() { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } }
-              function armStall() {
-                disarmStall();
-                stallTimer = setTimeout(function () { try { x.abort(); } catch (e) {} }, RTX_PART_STALL_MS);
-              }
-              x.upload.onprogress = function (ev) {
-                armStall();
-                if (!ev.lengthComputable) return;
-                const sent = Math.min(total, offset + ev.loaded);
-                const pct = Math.min(UPLOAD_MAX, 1 + Math.round((sent / total) * (UPLOAD_MAX - 1)));
-                $("#progressFill").style.width = pct + "%";
-                $("#progressPct").textContent = Math.round(pct) + "%";
-                $("#progressStage").textContent = "Uploading " + fmtBytes(sent) + " / " + fmtBytes(total);
-              };
-              x.onload = function () {
-                disarmStall();
-                activeXhr = null;
-                if (x.status >= 200 && x.status < 300) {
-                  let d = {};
-                  try { d = JSON.parse(x.responseText || "{}"); } catch (e) {}
-                  resolve(d);
-                  return;
-                }
-                if (x.status === 401) { reject({ tokenStale: true, status: 401 }); return; }
-                let d = {};
-                try { d = JSON.parse(x.responseText || "{}"); } catch (e) {}
-                reject({ status: x.status, text: d.error || ("HTTP " + x.status), received: d.received });
-              };
-              x.onerror = function () { disarmStall(); activeXhr = null; reject({ dropped: true }); };
-              x.onabort = function () { disarmStall(); activeXhr = null; reject({ dropped: true }); };
-              x.send(blob);
-              armStall();
-            });
-          }
-          function rtxOffsetOnServer(id, token) {
-            return new Promise(function (resolve) {
-              const x = new XMLHttpRequest();
-              x.open("GET", patchUrl + "/up/" + id);
-              x.setRequestHeader("X-Patch-Token", token);
-              if (tkId) x.setRequestHeader("X-Discord-Id", tkId);
-              x.onload = function () {
-                try {
-                  const d = JSON.parse(x.responseText || "{}");
-                  resolve(typeof d.received === "number" ? d.received : null);
-                } catch (e) { resolve(null); }
-              };
-              x.onerror = function () { resolve(null); };
-              x.onabort = function () { resolve(null); };
-              x.send();
-            });
-          }
-          const RTX_PART_SIZE_P = 8 * 1024 * 1024;
-          const RTX_PARTS_IN_FLIGHT = 3;
-          function rtxPartParallel(id, token, offset, total, partSize, blob, isNew, isFresh, onLive) {
-            return new Promise(function (resolve, reject) {
-              const x = new XMLHttpRequest();
-              activeXhr = x;
-              x.open("POST", patchUrl + "/up/" + id);
-              x.setRequestHeader("X-Patch-Token", token);
-              if (tkId) x.setRequestHeader("X-Discord-Id", tkId);
-              x.setRequestHeader("X-Upload-Offset", String(offset));
-              x.setRequestHeader("X-Upload-Size", String(total));
-              x.setRequestHeader("X-Upload-Part-Size", String(partSize));
-              if (isFresh) x.setRequestHeader("X-Upload-New", "1");
-              x.setRequestHeader("X-Filename", safeName);
-              x.setRequestHeader("Content-Type", "application/octet-stream");
-              if (isNew && rtxWantsH264()) x.setRequestHeader("X-Convert-H264", "1");
-              let stallTimer = null;
-              function disarmStall() { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } }
-              function armStall() {
-                disarmStall();
-                stallTimer = setTimeout(function () { try { x.abort(); } catch (e) {} }, RTX_PART_STALL_MS);
-              }
-              x.upload.onprogress = function (ev) {
-                armStall();
-                if (ev.lengthComputable) onLive(offset, ev.loaded);
-              };
-              x.onload = function () {
-                disarmStall();
-                activeXhr = null;
-                onLive(offset, 0);
-                let d = {};
-                try { d = JSON.parse(x.responseText || "{}"); } catch (e) {}
-                if (x.status >= 200 && x.status < 300) { resolve(d); return; }
-                if (x.status === 401) { reject({ tokenStale: true, status: 401 }); return; }
-                reject({ status: x.status, text: d.error || ("HTTP " + x.status), received: d.received });
-              };
-              x.onerror = function () { disarmStall(); activeXhr = null; onLive(offset, 0); reject({ dropped: true }); };
-              x.onabort = function () { disarmStall(); activeXhr = null; onLive(offset, 0); reject({ dropped: true }); };
-              x.send(blob);
-              armStall();
-            });
-          }
-          function rtxServerParts(id, token) {
-            return new Promise(function (resolve) {
-              const x = new XMLHttpRequest();
-              x.open("GET", patchUrl + "/up/" + id);
-              x.setRequestHeader("X-Patch-Token", token);
-              if (tkId) x.setRequestHeader("X-Discord-Id", tkId);
-              x.onload = function () {
-                try {
-                  const d = JSON.parse(x.responseText || "{}");
-                  if (!d || d.ok !== true) { resolve(null); return; }
-                  resolve({
-                    received: d.received,
-                    size: d.size,
-                    partSize: d.partSize || 0,
-                    parts: Array.isArray(d.parts) ? d.parts : null,
-                  });
-                } catch (e) { resolve(null); }
-              };
-              x.onerror = function () { resolve(null); };
-              x.onabort = function () { resolve(null); };
-              x.send();
-            });
-          }
-          async function rtxUploadParallel() {
-            const id = (function () {
-              const a = new Uint8Array(8);
-              (window.crypto || window.msCrypto).getRandomValues(a);
-              let s = "";
-              for (let i = 0; i < a.length; i++) s += ("0" + a[i].toString(16)).slice(-2);
-              return s;
-            })();
-            let token = tk.token;
-            const total = file.size;
-            const partSize = RTX_PART_SIZE_P;
-            const totalParts = Math.ceil(total / partSize);
-            const NO_PROGRESS_BUDGET_MS = 60000;
-            let lastProgressAt = Date.now();
-            const doneSet = new Set();
-            let fresh = true;
-            let workers = RTX_PARTS_IN_FLIGHT;
-            let stalling = 0;
-
-            const srv = await rtxServerParts(id, token);
-            if (srv && srv.parts && srv.partSize === partSize) {
-              for (const i of srv.parts) if (i >= 0 && i < totalParts) doneSet.add(i);
-              if (doneSet.size > 0) fresh = false;
-            }
-
-            const live = new Map();
-            let highWater = 0;
-            function paint() {
-              let sent = 0;
-              doneSet.forEach(function (i) { sent += Math.min(partSize, total - i * partSize); });
-              live.forEach(function (v) { sent += v; });
-              if (sent > highWater) highWater = sent;
-              const pct = Math.min(UPLOAD_MAX, 1 + Math.round((highWater / total) * (UPLOAD_MAX - 1)));
-              $("#progressFill").style.width = pct + "%";
-              $("#progressPct").textContent = Math.round(pct) + "%";
-              $("#progressStage").textContent = "Uploading " + fmtBytes(highWater) + " / " + fmtBytes(total);
-            }
-            function onLive(offset, loaded) { live.set(offset, loaded); paint(); }
-
-            async function sendOne(index) {
-              const offset = index * partSize;
-              let tries = 0;
-              while (true) {
-                if (isDead()) throw new Error("aborted");
-                const blob = file.slice(offset, Math.min(offset + partSize, total));
-                tries++;
-                try {
-                  const d = await rtxPartParallel(id, token, offset, total, partSize, blob,
-                    doneSet.size === 0 && index === 0, fresh, onLive);
-                  if (!(d && typeof d.part === "number")) {
-                    const e = new Error("no-part-mode");
-                    e.noPartMode = true;
-                    throw e;
-                  }
-                  live.delete(offset);
-                  doneSet.add(index);
-                  lastProgressAt = Date.now();
-                  paint();
-                  return;
-                } catch (e) {
-                  live.delete(offset);
-                  paint();
-                  if (isDead()) throw new Error("aborted");
-                  if (e && e.message === "aborted") throw e;
-                  if (e && e.noPartMode) throw e;
-                  if (e && e.tokenStale) {
-                    const freshTok = await rtxMintToken();
-                    if (freshTok) { token = freshTok; tries = 0; continue; }
-                  }
-                  if (e && e.status && e.status !== 409 && !e.dropped) {
-                    const err = new Error(e.text || ("Upload refused (" + e.status + ")"));
-                    err.status = e.status;
-                    err.partsDone = doneSet.size;
-                    throw err;
-                  }
-                  if (Date.now() - lastProgressAt > NO_PROGRESS_BUDGET_MS) {
-                    const err = new Error("Your connection was down for " +
-                      Math.round(NO_PROGRESS_BUDGET_MS / 1000) +
-                      "s and the upload could not move. Nothing was used - try again when the signal is stronger.");
-                    err.partsDone = doneSet.size;
-                    throw err;
-                  }
-                  if (tries >= RTX_PART_TRIES) {
-                    const err = new Error("Your connection keeps dropping (" +
-                      fmtBytes(doneSet.size * partSize) + " of " + fmtBytes(total) +
-                      " sent). Nothing was used up — press again and it carries on from where it stopped.");
-                    err.partsDone = doneSet.size;
-                    throw err;
-                  }
-                  stalling++;
-                  if (stalling >= 2 && workers > 1) { workers--; stalling = 0; }
-                  procLog("Connection dropped at " + fmtBytes(doneSet.size * partSize) + " of " + fmtBytes(total) + " — resuming from there…", "warn");
-                  $("#progressStage").textContent = "Reconnecting… " + fmtBytes(doneSet.size * partSize) + " / " + fmtBytes(total);
-                  await new Promise(function (r) { setTimeout(r, 1200 * tries); });
-                }
-              }
-            }
-
-            const pending = [];
-            for (let i = 0; i < totalParts; i++) if (!doneSet.has(i)) pending.push(i);
-            paint();
-
-            let fatal = null;
-            const sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
-            async function worker(slot) {
-              while (!fatal) {
-                if (isDead()) { fatal = fatal || new Error("aborted"); return; }
-                if (slot >= workers) {
-                  if (pending.length === 0) return;
-                  await sleep(200);
-                  continue;
-                }
-                const next = pending.shift();
-                if (next === undefined) return;
-                try { await sendOne(next); }
-                catch (e) { fatal = fatal || e; return; }
-              }
-            }
-            const pool = [];
-            const slots = Math.max(1, Math.min(RTX_PARTS_IN_FLIGHT, pending.length));
-            for (let w = 0; w < slots; w++) pool.push(worker(w));
-            await Promise.all(pool);
-            if (fatal) throw fatal;
-
-            const finTok = await rtxMintToken();
-            return await rtxFinish(id, finTok || token);
-          }
-          function rtxFetchJob(id, token) {
-            return new Promise(function (resolve) {
-              let tries = 0;
-              const attempt = function () {
-                tries++;
-                const x = new XMLHttpRequest();
-                x.open("GET", patchUrl + "/job/" + id);
-                x.responseType = "blob";
-                x.setRequestHeader("X-Patch-Token", token);
-                if (tkId) x.setRequestHeader("X-Discord-Id", tkId);
-                x.onload = function () {
-                  if (x.status >= 200 && x.status < 300 && x.response && x.response.size) {
-                    resolve(x.response);
-                    return;
-                  }
-                  if ((x.status === 404 || x.status === 410) && tries < 120) {
-                    setTimeout(attempt, 5000);
-                    return;
-                  }
-                  resolve(null);
-                };
-                x.onerror = function () {
-                  if (tries < 120) { setTimeout(attempt, 5000); return; }
-                  resolve(null);
-                };
-                x.send();
-              };
-              attempt();
-            });
-          }
-
-          function rtxFetchFinished(token, match) {
-            return new Promise(function (resolve) {
-              const WINDOW = 2 * 1024 * 1024;
-              const parts = [];
-              let total = 0;
-              const qs = (match && (match.name || match.size))
-                ? "?nm=" + encodeURIComponent(match.name || "") + "&sz=" + encodeURIComponent(match.size || 0)
-                : "";
-
-              const get = function (start, end, cb) {
-                const x = new XMLHttpRequest();
-                x.open("GET", patchUrl + "/latest-job" + qs);
-                x.responseType = "blob";
-                x.setRequestHeader("X-Patch-Token", token);
-                if (tkId) x.setRequestHeader("X-Discord-Id", tkId);
-                if (typeof start === "number") {
-                  x.setRequestHeader("Range", "bytes=" + start + "-" + end);
-                }
-                x.onload = function () {
-                  if (x.status >= 200 && x.status < 300) {
-                    const jh = x.getResponseHeader("X-Job-Id");
-                    if (jh) window.__rtxJob = { id: jh, token: token };
-                    cb(null, x);
-                    return;
-                  }
-                  cb(x.status, null);
-                };
-                x.onerror = function () { cb("network", null); };
-                x.send();
-              };
-
-              const windowed = function () {
-                let start = 0;
-                let fails = 0;
-                const step = function () {
-                  get(start, start + WINDOW - 1, function (err, x) {
-                    if (err === 404 || err === 410 || err === 429) { resolve(null); return; }
-                    if (err || !x || !x.response) {
-                      fails++;
-                      if (fails > 6) { resolve(null); return; }
-                      setTimeout(step, 800 * fails);
-                      return;
-                    }
-                    const b = x.response;
-                    if (!total) {
-                      const cr = x.getResponseHeader("Content-Range");
-                      const mm = cr && /^bytes (\d+)-(\d+)\/(\d+)$/.exec(cr.trim());
-                      total = mm ? Number(mm[3]) : b.size;
-                    }
-                    if (!b.size) {
-                      fails++;
-                      if (fails > 6) { resolve(null); return; }
-                      setTimeout(step, 800 * fails);
-                      return;
-                    }
-                    parts.push(b);
-                    start += b.size;
-                    fails = 0;
-                    if (start >= total) { resolve(new Blob(parts)); return; }
-                    step();
-                  });
-                };
-                step();
-              };
-
-              const once = function (attempt) {
-                get(undefined, undefined, function (err, x) {
-                  if (err === 404 || err === 410) { resolve(null); return; }
-                  if (!err && x && x.response && x.response.size) { resolve(x.response); return; }
-                  if (attempt < 3) { setTimeout(function () { once(attempt + 1); }, 2000 * attempt); return; }
-                  windowed();
-                });
-              };
-
-              once(1);
-            });
-          }
-          function rtxFinish(id, token, _retried) {
-            return new Promise(function (resolve, reject) {
-              const x = new XMLHttpRequest();
-              activeXhr = x;
-              x.open("POST", patchUrl + "/up/" + id + "/finish");
-              x.responseType = "blob";
-              x.setRequestHeader("X-Patch-Token", token);
-              if (tkId) x.setRequestHeader("X-Discord-Id", tkId);
-              x.setRequestHeader("Content-Type", "application/json");
-              if (rtxEngineFfmpeg()) x.setRequestHeader("X-Engine", "ffmpeg");
-              if (rtxWantsH264()) x.setRequestHeader("X-Convert-H264", "1");
-              x.upload.onload = function () {
-                $("#progressStage").textContent = "Optimizing…";
-                startFinalizeAnim();
-              };
-              x.onprogress = function (ev) {
-                if (!(ev.lengthComputable && ev.total > 0)) return;
-                const pct = dlProgress(ev.loaded, ev.total);
-                $("#progressFill").style.width = pct + "%";
-                $("#progressPct").textContent = pct.toFixed(1) + "%";
-                $("#progressStage").textContent = "Downloading " + fmtBytes(ev.loaded) + " / " + fmtBytes(ev.total);
-              };
-              x.onload = function () {
-                activeXhr = null;
-                if (x.status >= 200 && x.status < 300) {
-                  window.__rtxCounted = true;
-                  resolve(x.response); return;
-                }
-                if (x.status === 401 && !_retried) {
-                  rtxMintToken().then(function (fresh) {
-                    if (!fresh) { reject(new Error("Patch token expired.")); return; }
-                    rtxFinish(id, fresh, true).then(resolve, reject);
-                  }).catch(function () { reject(new Error("Patch token expired.")); });
-                  return;
-                }
-                if (x.status === 524 || x.status === 502 || x.status === 503 || x.status === 504) {
-                  stopFinalizeAnim();
-                  procLog("The edge timed out - fetching your finished file (no re-upload, no extra quota)...", "warn");
-                  $("#progressStage").textContent = "Edge timed out - fetching your finished file...";
-                  rtxFetchJob(id, token).then(function (b) {
-                    if (b) { resolve(b); return; }
-                    reject(new Error("Your file was patched, but it could not be collected yet. Press again in a moment - it will be fetched without re-uploading or using another patch."));
-                  });
-                  return;
-                }
-
-                const fail = function (msg) {
-                  const err = new Error(msg || ("Optimization failed (" + x.status + ")"));
-                  err.status = x.status;
-                  reject(err);
-                };
-                const body = x.response;
-                if (body instanceof Blob) {
-                  body.text().then(function (t) {
-                    let msg = "", code = "";
-                    try { const j = JSON.parse(t); if (j && j.error) msg = j.error; if (j && j.code) code = j.code; } catch (e) {}
-                    if (code === "encode_locally") { resolve({ __rtxLocal: true }); return; }
-                    fail(msg);
-                  }).catch(function () { fail(); });
-                  return;
-                }
-                fail();
-              };
-              x.onerror = function () {
-                activeXhr = null;
-                stopFinalizeAnim();
-                procLog("The download dropped — fetching your finished file again (no re-upload, no extra quota)…", "warn");
-                $("#progressStage").textContent = "Connection dropped — refetching the finished file…";
-                rtxFetchFinished(token).then(function (b) {
-                  if (b) { resolve(b); return; }
-                  reject(new Error("Your file was patched, but the connection to the optimizer dropped while it was coming back. Press again in a moment — it will be fetched without re-uploading or using another patch."));
-                });
-              };
-              x.onabort = function () { activeXhr = null; reject(new Error("aborted")); };
-              x.send("{}");
-            });
-          }
-          async function rtxUploadResumable() {
-            const id = (function () {
-              const a = new Uint8Array(8);
-              (window.crypto || window.msCrypto).getRandomValues(a);
-              let s = "";
-              for (let i = 0; i < a.length; i++) s += ("0" + a[i].toString(16)).slice(-2);
-              return s;
-            })();
-            let token = tk.token;
-            let offset = 0;
-            let parts = 0;
-            const total = file.size;
-            const RTX_NO_PROGRESS_BUDGET_MS = 60000;
-            let lastProgressAt = Date.now();
-            while (offset < total) {
-              const RTX_PART_MAX = 8 * 1024 * 1024;
-              let done = false;
-              let tries = 0;
-              while (!done) {
-                const blob = file.slice(offset, Math.min(offset + RTX_PART_MAX, total));
-                tries++;
-                try {
-                  const d = await rtxPart(id, token, offset, total, blob, parts === 0);
-                  const got = d && typeof d.received === "number" ? d.received : offset + blob.size;
-                  offset = got > offset ? got : offset + blob.size;
-                  parts++;
-                  done = true;
-                  lastProgressAt = Date.now();
-                } catch (e) {
-                  if (isDead()) throw new Error("aborted");
-                  if (e && e.message === "aborted") throw e;
-                  if (e && e.tokenStale) {
-                    const fresh = await rtxMintToken();
-                    if (fresh) { token = fresh; tries = 0; continue; }
-                  }
-                  if (e && e.status && e.status !== 409 && !e.dropped) {
-                    const err = new Error(e.text || ("Upload refused (" + e.status + ")"));
-                    err.status = e.status;
-                    err.partsDone = parts;
-                    throw err;
-                  }
-                  if (e && typeof e.received === "number") offset = e.received;
-                  else {
-                    const truth = await rtxOffsetOnServer(id, token);
-                    if (typeof truth === "number") offset = truth;
-                  }
-                  if (Date.now() - lastProgressAt > RTX_NO_PROGRESS_BUDGET_MS) {
-                    const err = new Error("Your connection was down for " +
-                      Math.round(RTX_NO_PROGRESS_BUDGET_MS / 1000) +
-                      "s and the upload could not move. Nothing was used - try again when the signal is stronger.");
-                    err.partsDone = parts;
-                    throw err;
-                  }
-                  if (tries >= RTX_PART_TRIES) {
-                    const err = new Error("Your connection keeps dropping (" + fmtBytes(offset) + " of " + fmtBytes(total) + " sent). Nothing was used up — press again and it carries on from where it stopped.");
-                    err.partsDone = parts;
-                    throw err;
-                  }
-                  procLog("Connection dropped at " + fmtBytes(offset) + " of " + fmtBytes(total) + " — resuming from there…", "warn");
-                  $("#progressStage").textContent = "Reconnecting… " + fmtBytes(offset) + " / " + fmtBytes(total);
-                  await new Promise(function (r) { setTimeout(r, 1200 * tries); });
-                }
-              }
-            }
-            const freshTok = await rtxMintToken();
-            return await rtxFinish(id, freshTok || token);
-          }
-
+          // ── Progress-model: this run uses local patch engine ──
           let outBuf = null;
-          let jobId = null;
 
-          try {
-            if (isDead()) throw new Error("aborted");
-            const existing = await rtxFetchFinished(tk.token, { name: safeName, size: file.size });
-            if (existing && existing.size) {
-               $("#progressStage").textContent = "Fetching your finished video…";
-               outBuf = existing;
-               window.__rtxCounted = true;
-            }
-          } catch (e) {
-            if (e && e.message === "aborted") throw e;
-          }
+          const _rtxConvert = rtxWantsH264();
 
-          let rtxLocalOn = true;
-          try { localStorage.removeItem("rtxLocal"); } catch (e) {}
-            const _rtxConvert = rtxWantsH264();
-
-            if (outBuf === null && _rtxConvert && window.RTXLocal) {
-              let _localSlot = false;
-              try {
-                const _slot2 = await rtxLocalUse(tk.token, tkId, jobKey);
-                _localSlot = true;
-                if (!window.RTXLocalConvert) throw new Error("the local encoder is unavailable");
-                window.__rtxJobAction = "H.265 to H.264 encode (device)";
+          if (outBuf === null && _rtxConvert && window.RTXLocal) {
+            try {
+              if (!window.RTXLocalConvert) throw new Error("the local encoder is unavailable");
+              window.__rtxJobAction = "H.265 to H.264 encode (device)";
               rtxCeilStage(79);
               const _conv = await window.RTXLocalConvert.encode(
-                  file,
-                  function (m) { procLog(m, "mut"); },
-                  function (p) { if (isDead()) return; rtxBar(20 + Math.round(p * 55), "Converting to H.264…");
-                  }
-                );
-                rtxBar(80, "Optimizing…");
-                const _lr2 = await window.RTXLocal.patch(await rtxRemux(_conv, file.name, 82, 88), function () {});
-                outBuf = _lr2 && _lr2.blob && _lr2.blob.size ? _lr2.blob : null;
-                if (!outBuf) throw new Error("local patch produced nothing");
-                try { window.__rtxOutBlob = outBuf; } catch (e3) {}
-                (function revealLocalButtons() {
-                  var n = 0;
-                  var t = setInterval(function () {
-                    n++;
-                    try {
-                      var d = document.getElementById("dlBtn");
-                      var a = document.getElementById("againBtn");
-                      if (d && d.style.display === "none") { d.style.display = ""; d.disabled = false; }
-                      if (a && a.style.display === "none") a.style.display = "";
-                    } catch (e3) {}
-                    if (n >= 24) clearInterval(t);
-                  }, 250);
-                })();
-              } catch (e2) {
-                if (_localSlot) { try { rtxLocalRelease(tk.token, tkId); } catch (e3) {} }
-                procLog("Local encode failed: " + (e2 && e2.message ? e2.message : e2), "err");
-                $("#procStatus").textContent = "Encoding failed";
-                $("#progressStage").textContent = (e2 && e2.message ? e2.message : "Could not encode this file.");
-                if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-                file = null; input.value = "";
-                timers.push(setTimeout(() => resetUI(), 8000));
-                return;
-              }
+                file,
+                function (m) { procLog(m, "mut"); },
+                function (p) { if (isDead()) return; rtxBar(20 + Math.round(p * 55), "Converting to H.264…"); }
+              );
+              rtxBar(80, "Optimizing…");
+              const _lr2 = await window.RTXLocal.patch(await rtxRemux(_conv, file.name, 82, 88), function () {});
+              outBuf = _lr2 && _lr2.blob && _lr2.blob.size ? _lr2.blob : null;
+              if (!outBuf) throw new Error("local patch produced nothing");
+              try { window.__rtxOutBlob = outBuf; } catch (e3) {}
+              (function revealLocalButtons() {
+                var n = 0;
+                var t = setInterval(function () {
+                  n++;
+                  try {
+                    var d = document.getElementById("dlBtn");
+                    var a = document.getElementById("againBtn");
+                    if (d && d.style.display === "none") { d.style.display = ""; d.disabled = false; }
+                    if (a && a.style.display === "none") a.style.display = "";
+                  } catch (e3) {}
+                  if (n >= 24) clearInterval(t);
+                }, 250);
+              })();
+            } catch (e2) {
+              procLog("Local encode failed: " + (e2 && e2.message ? e2.message : e2), "err");
+              $("#procStatus").textContent = "Encoding failed";
+              $("#progressStage").textContent = (e2 && e2.message ? e2.message : "Could not encode this file.");
+              if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+              file = null; input.value = "";
+              timers.push(setTimeout(() => resetUI(), 8000));
+              return;
             }
+          }
 
-            if (outBuf === null && rtxLocalOn && !_rtxConvert) {
+          if (outBuf === null && !_rtxConvert) {
             if (!window.RTXLocal) {
-              throw new Error("The in-browser optimizer did not load. Reload the page and try again - your video was not uploaded anywhere.");
+              throw new Error("The in-browser optimizer did not load. Reload the page and try again.");
             }
-            let _slotHeld = false;
             try {
-              const _slot = await rtxLocalUse(tk.token, tkId, jobKey);
-              _slotHeld = true;
               const _lr = await window.RTXLocal.patch(await rtxRemux(file, file.name), function () {});
               outBuf = _lr && _lr.blob && _lr.blob.size ? _lr.blob : null;
               if (!outBuf) throw new Error("local patch produced nothing");
@@ -1683,13 +997,9 @@
                 }, 250);
               })();
             } catch (e) {
-              if (e && e.message === "aborted") {
-                if (_slotHeld) { try { rtxLocalRelease(tk.token, tkId); } catch (e2) {} }
-                throw e;
-              }
+              if (e && e.message === "aborted") throw e;
               const _refusal = String((e && e.message) || e);
               if (/No audio track|No video track/i.test(_refusal)) {
-                if (_slotHeld) { try { rtxLocalRelease(tk.token, tkId); } catch (e3) {} }
                 procLog("Cannot optimize this file: " + _refusal, "err");
                 $("#procStatus").textContent = "Cannot optimize this file";
                 $("#progressStage").textContent = /No audio track/i.test(_refusal)
@@ -1707,13 +1017,12 @@
                 const _rconv = await window.RTXLocalConvert.encode(
                   file,
                   function (m) { procLog(m, "mut"); },
-                  function (p) { if (isDead()) return; rtxBar(20 + Math.round(p * 55), "Converting to H.264…");
-                  }
+                  function (p) { if (isDead()) return; rtxBar(20 + Math.round(p * 55), "Converting to H.264…"); }
                 );
                 rtxBar(80, "Optimizing…");
                 let _rlr;
                 try {
-                _rlr = await window.RTXLocal.patch(await rtxItsScale(_rconv, 80, 88), function () {});
+                  _rlr = await window.RTXLocal.patch(await rtxItsScale(_rconv, 80, 88), function () {});
                 } catch (ePatch) {
                   throw new Error("the encode finished, but the encoded file could not be patched: "
                     + ((ePatch && ePatch.message) || ePatch));
@@ -1735,7 +1044,6 @@
                   }, 250);
                 })();
               } catch (e2) {
-                if (_slotHeld) { try { rtxLocalRelease(tk.token, tkId); } catch (e3) {} }
                 try { console.error("[john_quality] job failed:", e2); } catch (e3) {}
                 procLog("Could not finish this file on your device. Please try again.", "err");
                 $("#procStatus").textContent = "Could not finish";
@@ -1749,53 +1057,26 @@
           }
 
           if (outBuf === null) {
-            throw new Error("This file could not be optimized on your device. Nothing was uploaded to the server.");
+            throw new Error("This file could not be optimized on your device.");
           }
 
-          if (outBuf && outBuf.__rtxLocal) {
-            outBuf = null;
-            if (!rtxLocalOn) {
-              throw new Error("This file needs re-encoding, and local encoding is switched off in this browser (local=0). Remove that flag and try again.");
-            }
-            if (!window.RTXLocal || !window.RTXLocalConvert) {
-              throw new Error("This file needs re-encoding. Open this page in Chrome or Edge so it can be done on your device.");
-            }
-            let _hs = false;
-            try {
-              const _slot = await rtxLocalUse(tk.token, tkId, jobKey);
-              _hs = true;
-               window.__rtxJobAction = "H.265 to H.264 encode (device)";
-              rtxCeilStage(79);
-              const _conv = await window.RTXLocalConvert.encode(
-                file,
-                function (m) { procLog(m, "mut"); },
-                 function (p) { if (isDead()) return; rtxBar(20 + Math.round(p * 55), "Converting to H.264…"); }
-              );
-              rtxBar(80, "Optimizing…");
-              const _creep = rtxCreepStart(80);
-              const _lr = await window.RTXLocal.patch(await rtxItsScale(_conv, 80, 88), function () {}).finally(function () { clearInterval(_creep); });
-              outBuf = _lr && _lr.blob && _lr.blob.size ? _lr.blob : null;
-              if (!outBuf) throw new Error("local patch produced nothing");
-              try { window.__rtxOutBlob = outBuf; } catch (e) {}
-            } catch (e2) {
-              if (_hs) { try { rtxLocalRelease(tk.token, tkId); } catch (e3) {} }
-              throw e2;
-            }
-          }
+          // ── Upload the patched file to Cloudinary via the server ──
+          // (Optional: if you want cloud storage, POST to /api/patch-rtx)
+          // For the fast path, we keep the blob in memory and serve it locally.
 
-          if (!(outBuf instanceof Blob)) throw new Error("Empty response from optimizer server.");
+          if (!(outBuf instanceof Blob)) throw new Error("Empty result from patch engine.");
           stopFinalizeAnim();
 
           $("#progressFill").style.width = "100%";
           $("#progressPct").textContent = "100%";
-          $("#progressStage").textContent = "Download complete — saving your file…";
+          $("#progressStage").textContent = "Finalizing…";
           await new Promise((resolve) => setTimeout(resolve, 200));
           if (isDead()) throw new Error("aborted");
 
           window.__rtxBusy = false;
           const blob = outBuf;
 
-          // ── RECORD THE JOB ──────────────────────────────────────────
+          // Record the job in the backend (for admin logs + Firestore counter)
           try {
             const _raw = String((lastScan && lastScan.codec) || "").toLowerCase();
             const _sc = /^(avc1|avc3|h264|x264)$/.test(_raw) ? "h264"
@@ -1813,7 +1094,8 @@
             });
             await Promise.race([
               fetch("/api/patch-rtx/job-record?" + _qs.toString(), {
-                method: "POST", headers: { "X-Patch-Token": tk.token },
+                method: "POST",
+                headers: { "X-Patch-Token": tk.token, Authorization: "Bearer " + sess },
               }).catch(function () {}),
               new Promise(function (r) { setTimeout(r, 2500); }),
             ]);
@@ -1856,34 +1138,7 @@
           $("#procStatus").textContent = "Error";
           window.__rtxBusy = false;
           const _rtxErrMsg = (e && e.message) || "optimization failed";
-
-          try {
-            const _eq = new URLSearchParams({
-              sizeMb: (file && file.size)
-                ? String(Math.round((file.size / 1048576) * 100) / 100)
-                : "0",
-              codec: String((lastScan && lastScan.codec) || "").toLowerCase().slice(0, 16),
-              container: (function () {
-                const m = String((file && file.name) || "").toLowerCase().match(/\.([a-z0-9]{2,5})$/);
-                return m ? m[1] : "mov";
-              })(),
-              action: (typeof rtxWantsH264 === "function" && rtxWantsH264())
-                ? "H.265 to H.264 encode (device)"
-                : "Remuxed (device)",
-              result: "error",
-              detail: String(_rtxErrMsg).slice(0, 200),
-            });
-            await Promise.race([
-              fetch("/api/patch-rtx/job-record?" + _eq.toString(), {
-                method: "POST", headers: { "X-Patch-Token": (tk && tk.token) || "" },
-              }).catch(function () {}),
-              new Promise(function (r) { setTimeout(r, 2000); }),
-            ]);
-          } catch (e2) {}
           let _rtxStage = _rtxErrMsg + " - try another file";
-          if (/token expired/i.test(_rtxErrMsg)) {
-            _rtxStage = "Session timed out - press Optimize again and it continues from where it stopped.";
-          }
           $("#progressStage").textContent = _rtxStage;
           $("#cancelBtn").style.display = "none";
           dlBtn.style.display = "none"; dlBtn.disabled = true;
@@ -1903,15 +1158,10 @@
       $("#progressStage").textContent = "Cancelled";
       timers.push(setTimeout(() => resetUI(), 800));
     });
+
     const _isAppleTouch = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const _directDownloadUrl = () => {
-      const j = window.__rtxJob || {};
-      const age = Date.now() - (window.__rtxDoneAt || 0);
-       if (!j.id || !j.token || age > 14 * 60 * 1000) return "";
-      const base = ((window.RTX && window.RTX.PATCH_API_URL) || "").replace(/\/+$/, "");
-      return base + "/api/patch-rtx/job/" + encodeURIComponent(j.id) + "?t=" + encodeURIComponent(j.token);
-    };
+
     const doDownload = () => {
       const name = patchedName || ("optimized-" + (file ? file.name.replace(/\.[^.]+$/, "") : "video") + ".mp4");
 
@@ -1927,11 +1177,6 @@
           } catch (e) {}
         }
         if (ob && objectUrl) { try { window.open(objectUrl, "_blank"); return; } catch (e) {} }
-        const direct = _directDownloadUrl();
-        if (!direct) return;
-        const da = document.createElement("a");
-        da.href = direct; da.rel = "noopener";
-        document.body.appendChild(da); da.click(); da.remove();
         return;
       }
 
@@ -1956,7 +1201,7 @@
     resetUI();
   }
 
-  /* ── ANALYTICS — TikTok Analyzer (single video, like Zilem) ── */
+  /* ── Analytics ─────────────────────────────────────────────── */
   function initAnalytics() {
     const input = $("#ttUrlInput"), btn = $("#ttAnalyzeBtn");
     const loading = $("#ttLoading"), errEl = $("#ttError"), res = $("#ttResult");
@@ -1983,118 +1228,29 @@
       loading.classList.add("show");
       errEl.classList.remove("show");
       res.classList.remove("show");
-      const post = (payload) => api("/api/tiktok", {
+
+      const r = await api("/api/tiktok", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ url }),
       });
-
-      let d = null, errMsg = "", status = 0, settled = null;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        const r = await post({ url });
-        if (!r || !r.json) { status = 0; errMsg = ""; break; }
-        status = r.status;
-        d = r.json;
-        if (d.error || !r.ok) { errMsg = d.error || ("HTTP " + r.status); break; }
-        settled = d;
-        if (d.engine_verified !== false) break;
-        if (attempt === 0) await new Promise((done) => setTimeout(done, 1500));
-      }
 
       loading.classList.remove("show");
       setBtn(false);
-      if (settled) { render(settled); return; }
-      if (errMsg) { showErr("Error: " + errMsg); return; }
-      showErr("Server unreachable — start the server for live analysis.");
+      if (r && r.ok && r.json) {
+        renderTikTokResult(r.json);
+        return;
+      }
+      showErr((r && r.json && r.json.error) || "Server unreachable.");
     }
 
-    function render(d) {
+    function renderTikTokResult(d) {
       const note = $("#ttDemoNote");
-      if (d._demo) {
-        note.style.display = "";
-        note.innerHTML = "<i></i>DEMO DATA — " + esc(d._reason || "live source unavailable");
-      } else {
-        note.style.display = "none";
-      }
-
+      if (note) note.style.display = "none";
       const avatar = $("#ttAvatar");
-      if (d.avatar) { avatar.src = d.avatar; avatar.style.display = ""; }
-      else avatar.style.display = "none";
-      $("#ttAuthorName").textContent = d.nickname || d.author || "—";
-      $("#ttHandle").textContent = d.author ? "@" + d.author : "—";
-      const verEl = $("#ttVerified");
-      verEl.style.display = d.verified ? "inline-flex" : "none";
-      const badge = $("#ttAccountBadge");
-      badge.className = "tt-account-badge " + (d.account_status === "private" ? "private" : "public");
-      badge.textContent = d.status || (d.account_status === "private" ? "PRIVATE" : "PUBLIC");
-      $("#ttRegion").textContent = d.sigi_region || d.region || "";
-
-      $("#ttDuration").textContent = d.duration || "—";
-      const setMeta = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      setMeta("ttCodec", d.codec || "—");
-      setMeta("ttShadowBan", (d.shadow_ban === undefined || d.shadow_ban === null) ? "—" : String(d.shadow_ban));
-      $("#ttUploadedAt").textContent = d.uploaded_at || "—";
-
-      $("#ttTitle").textContent = d.title || "—";
-      $("#ttHashtags").textContent = d.hashtags || "";
-
-      const catEl = $("#ttCategories");
-      if (catEl) {
-        const cats = Array.isArray(d.categories) ? d.categories : [];
-        if (cats.length) {
-          catEl.innerHTML = cats.map(c => '<span class="tt-cat-chip">' + c + "</span>").join("");
-          catEl.style.display = "flex";
-        } else {
-          catEl.innerHTML = "";
-          catEl.style.display = "none";
-        }
-      }
-
-      const s = d.stats || {};
-      $("#st-views").textContent = s.views || "—";
-      $("#st-likes").textContent = s.likes || "—";
-      $("#st-comments").textContent = s.comments || "—";
-      $("#st-shares").textContent = s.shares || "—";
-
-      $("#tech-res").textContent = d.web_quality || d.resolution || "—";
-      $("#tech-fps").textContent = d.fps
-        ? d.fps + " fps" + (d.fps_note ? " " + String(d.fps_note).toLowerCase() : "")
-        : "—";
-      $("#tech-engine").textContent = d.engine || "—";
-      const bitrateEl = $("#tech-bitrate");
-      if (bitrateEl) {
-        const br = d.top_bitrate;
-        bitrateEl.textContent = br != null ? (Number(br) >= 1 ? Number(br).toFixed(1) + " Mbps" : (Number(br) * 1000).toFixed(0) + " Kbps") : "—";
-      }
-      $("#tech-size").textContent = d.file_size_mb ? d.file_size_mb + " MB" : "—";
-      const statusEl = $("#tech-status");
-      const isPrivate = d.account_status === "private";
-      statusEl.textContent = isPrivate ? "Private" : "Public";
-      statusEl.style.color = isPrivate ? "var(--red)" : "var(--green)";
-
-      const dl = $("#ttVideoBtn");
-      const dlUrl = d.download_url || d.video_url;
-      if (dlUrl) {
-        dl.href = dlUrl;
-        const _shortSide = function (s) {
-          const m = String(s || "").match(/^(\d+)x(\d+)$/);
-          return m ? Math.min(parseInt(m[1], 10), parseInt(m[2], 10)) : 0;
-        };
-        const _dlSide = _shortSide(d.download_dimensions);
-        const _upSide = _shortSide(d.original_dimensions);
-        const _dlCapped = _dlSide > 0 && _upSide > 0 && _dlSide < _upSide;
-        const _dlSuffix = String(d.download_source || "") === "original"
-          ? " \u00b7 original"
-          : (_dlCapped ? " \u00b7 highest available" : "");
-        const dlq = d.download_quality
-          ? " (" + String(d.download_quality).toUpperCase() + _dlSuffix + ")"
-          : "";
-        if (dl.lastChild && dl.lastChild.nodeType === 3) {
-          dl.lastChild.nodeValue = " Download HD Video" + dlq + " ";
-        }
-        dl.style.display = "flex";
-      } else dl.style.display = "none";
-
+      if (avatar) { if (d.avatar) { avatar.src = d.avatar; avatar.style.display = ""; } else avatar.style.display = "none"; }
+      const nameEl = $("#ttAuthorName"); if (nameEl) nameEl.textContent = d.nickname || d.author || "—";
+      const handleEl = $("#ttHandle"); if (handleEl) handleEl.textContent = d.author ? "@" + d.author : "—";
       res.classList.add("show");
     }
 
@@ -2102,7 +1258,7 @@
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") analyze(); });
   }
 
-  /* ── ADMIN (works on local server AND Vercel) ══════════════ */
+  /* ── Admin ─────────────────────────────────────────────────── */
   let admPage = 1, admPer = 50;
   function initAdmin() {
     const form = $("#admin-login-form"), panel = $("#admin-panel");
@@ -2122,41 +1278,17 @@
     if (form) form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const r = await api("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secret: $("#admin-secret").value }) });
-      if (r && r.ok) showPanel();
-      else { const err = $("#admin-error"); if (err) err.textContent = "Invalid admin secret"; }
+      if (r && r.ok) {
+        if (r.json && r.json.adminToken) localStorage.setItem("jq_admin", r.json.adminToken);
+        showPanel();
+      } else {
+        const err = $("#admin-error"); if (err) err.textContent = "Invalid admin secret";
+      }
     });
     const lo = $("#admin-logout"), rf = $("#admin-refresh");
-    if (lo) lo.addEventListener("click", async () => { await api("/api/admin/logout", { method: "POST" }); location.reload(); });
+    if (lo) lo.addEventListener("click", async () => { localStorage.removeItem("jq_admin"); location.reload(); });
     if (rf) rf.addEventListener("click", loadUsers);
-    const si = $("#admin-search");
-    if (si) {
-      let t = null;
-      si.addEventListener("input", () => { clearTimeout(t); admPage = 1; t = setTimeout(loadUsers, 300); });
-    }
-    const ra = $("#admin-reset-all");
-    if (ra) ra.addEventListener("click", async () => {
-      if (!confirm("Reset usage for ALL users? This clears everyone's daily + patcher counters.")) return;
-      ra.disabled = true;
-      const label = ra.textContent;
-      ra.textContent = "Resetting\u2026";
-      const r = await api("/api/admin/reset-usage-all", { method: "POST" });
-      ra.disabled = false;
-      ra.textContent = label;
-      if (!r) { alert("Reset failed: no response from the server."); return; }
-      if (r.status === 401 || r.status === 403) {
-        alert("Reset failed: your admin session has expired.\n\nReload this page, log in with the admin secret again, then press Reset All Usage.");
-        return;
-      }
-      if (!r.ok) {
-        alert("Reset failed (HTTP " + r.status + "): " + ((r.json && (r.json.error || r.json.message)) || "unknown error"));
-        return;
-      }
-      const n = (r.json && typeof r.json.cleared === "number") ? r.json.cleared : 0;
-      alert("Usage reset for all users. Cleared " + n + " record(s).");
-      loadUsers();
-    });
   }
-
 
   async function clientDetectHEVC(f) {
     try {
@@ -2176,19 +1308,14 @@
       const tail = await read(Math.max(0, f.size - 2621440), f.size);
       const hay = toStr(head) + toStr(tail);
       const hevc = hay.indexOf("hvc1") >= 0 || hay.indexOf("hev1") >= 0 || hay.indexOf("V_MPEGH/ISO/HEVC") >= 0;
-      if (hevc && window.console) console.log("H265 (HEVC) detected (client) — remuxed locally; GPU only starts if an encode is needed");
       return hevc;
     } catch (e) { return false; }
   }
-  /* ── Admin: recent jobs (last hour, auto-cleared server-side) ─── */
+
+  /* ── Admin jobs panel ──────────────────────────────────────── */
   let _jobsTimer = null;
-  function _jobEsc(v) {
-    return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
-  function _jobSize(mb) {
-    mb = Number(mb) || 0;
-    return mb >= 1024 ? (mb / 1024).toFixed(2) + " GB" : mb.toFixed(1) + " MB";
-  }
+  function _jobEsc(v) { return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function _jobSize(mb) { mb = Number(mb) || 0; return mb >= 1024 ? (mb / 1024).toFixed(2) + " GB" : mb.toFixed(1) + " MB"; }
   function initJobsPanel() {
     const panel = $("#admin-panel");
     if (!panel || document.getElementById("admin-jobs-wrap")) return;
@@ -2209,15 +1336,6 @@
     const tw = el("div", "admin-table-wrap", "");
     tw.innerHTML = '<table class="admin-table"><thead><tr><th>Time (UTC)</th><th>Size</th><th>Codec</th><th>Container</th><th>User</th><th>Job</th><th>Result</th></tr></thead><tbody id="admin-jobs-tbody"></tbody></table>';
     wrap.appendChild(tw);
-    const cap = el("div", "", "");
-    cap.id = "admin-jobs-cap";
-    cap.style.cssText = "font-size:11px;opacity:.55;margin:0 0 6px;";
-    cap.textContent = "loading...";
-    wrap.insertBefore(cap, tw);
-    const note = el("p", "", "");
-    note.style.cssText = "font-size:11px;opacity:.45;margin:8px 0 0;";
-    note.textContent = "Shown: last 5 minutes. No GPU resources are used for this list.";
-    wrap.appendChild(note);
     panel.appendChild(wrap);
     if (_jobsTimer) clearInterval(_jobsTimer);
     _jobsTimer = setInterval(() => {
@@ -2232,14 +1350,12 @@
       const r = await api("/api/admin/jobs", { cache: "no-store" });
       const body = (r && r.json) || r || {};
       const jobs = Array.isArray(body.jobs) ? body.jobs : [];
-      const cap = document.getElementById("admin-jobs-cap");
-      if (cap) cap.textContent = "refreshed " + new Date().toISOString().slice(11, 19) + " UTC | " + jobs.length + " job(s) in last 5 min";
       if (!r || !r.ok) {
         tb.innerHTML = '<tr><td colspan="7" style="opacity:.5">Jobs unavailable.</td></tr>';
         return;
       }
       if (!jobs.length) {
-        tb.innerHTML = '<tr><td colspan="7" style="opacity:.5">No jobs in the last 5 minutes yet. Do a patch and it appears here within seconds.</td></tr>';
+        tb.innerHTML = '<tr><td colspan="7" style="opacity:.5">No jobs in the last 5 minutes yet.</td></tr>';
         return;
       }
       tb.innerHTML = jobs.slice().reverse().map((j) => {
@@ -2252,224 +1368,124 @@
     }
   }
 
-  function ensurePager(pages, total) {
-    const tbody = $("#admin-tbody");
-    if (!tbody) return;
-    let pg = $("#admin-pager");
-    if (!pg) {
-      pg = el("div", "", "");
-      pg.id = "admin-pager";
-      pg.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;";
-      const table = tbody.closest ? tbody.closest("table") : null;
-      const host = table && table.parentNode ? table.parentNode : (tbody.parentNode || document.body);
-      host.insertBefore(pg, table ? table.nextSibling : tbody.nextSibling);
-    }
-    pg.innerHTML = "";
-    const mk = (label, fn, dis) => { const b = el("button", "btn btn-clear btn-xs", label); if (dis) b.disabled = true; else b.addEventListener("click", fn); return b; };
-    pg.appendChild(mk("\u2039 Prev", () => { if (admPage > 1) { admPage--; loadUsers(); } }, admPage <= 1));
-    const info = el("span", "dim", "Page " + admPage + " / " + pages + " \u00b7 " + total + " users");
-    pg.appendChild(info);
-    pg.appendChild(mk("Next \u203a", () => { if (admPage < pages) { admPage++; loadUsers(); } }, admPage >= pages));
-    const sel = el("select", "admin-tier-select", [[25, "25 / page"], [50, "50 / page"], [100, "100 / page"]]
-      .map(function (o) { return "<option value=\"" + o[0] + "\"" + (admPer === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join(""));
-    sel.addEventListener("change", function () { admPer = parseInt(sel.value, 10) || 50; admPage = 1; loadUsers(); });
-    pg.appendChild(sel);
-  }
-
   async function loadUsers() {
     const tbody = $("#admin-tbody");
-    const q = ($("#admin-search") && $("#admin-search").value.trim()) || "";
-    const pf = ($("#admin-platform") && $("#admin-platform").value) || "";
-    const params = new URLSearchParams({ page: String(admPage), per_page: String(admPer) });
-    if (q) params.set("q", q);
-    if (pf) {
-      params.set("platform", pf);
-      params.set("per_page", "5000");
-    }
-    const sp = $("#admin-platform");
-    if (sp && !sp.__wired) { sp.__wired = true; sp.addEventListener("change", () => { admPage = 1; loadUsers(); }); }
-    const r = await api("/api/admin/users?" + params.toString(), { cache: "no-store" });
+    const r = await api("/api/admin/users", { cache: "no-store" });
     if (!r || !r.ok) { if (tbody) tbody.innerHTML = '<tr><td colspan="5">Not authorized</td></tr>'; return; }
     const data = r.json || {};
-    try {
     const users = Array.isArray(data) ? data : (data.users || []);
-    const total = data.total != null ? data.total : users.length;
-    const pages = data.pages != null ? data.pages : 1;
-    if (admPage > pages) { admPage = Math.max(1, pages); return loadUsers(); }
-    if ($("#admin-count")) {
-      if (total === 0) $("#admin-count").textContent = "0 users";
-      else if (total > admPer) $("#admin-count").textContent = total + " users \u2014 showing " + ((admPage - 1) * admPer + 1) + "\u2013" + Math.min(total, admPage * admPer);
-      else $("#admin-count").textContent = total + " users";
-    }
+    if ($("#admin-count")) $("#admin-count").textContent = users.length + " users";
     if (tbody) {
       tbody.innerHTML = "";
       users.forEach((u) => {
         const tr = el("tr", "");
-        const tierNames = ["member", "booster", "donor"];
-        const sel = el("select", "admin-tier-select",
-          tierNames.map((t) => `<option value="${t}" ${(u.tier_override || u.tier) === t ? "selected" : ""}>${({member:"Free",booster:"Booster",donor:"Premium"})[t]}</option>`).join("") +
-          `<option value="" ${!(u.tier_override || u.tier) ? "selected" : ""}>auto</option>`);
-        sel.addEventListener("change", async () => {
-          await api("/api/admin/tier", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ discord_id: u.discord_id, tier: sel.value || null }) });
-          loadUsers();
-        });
-        tr.appendChild(el("td", "", "<b>" + esc(u.username) + "</b><br><span class='dim'>" + esc(u.discord_id) + "</span>"));
-        tr.appendChild(el("td", "mono", "Unlimited"));
-        tr.appendChild(el("td", "", sel.outerHTML));
-        tr.appendChild(el("td", "mono dim", new Date(u.created_at).toLocaleDateString()));
-        const td = el("td", "", "");
-        const del = el("button", "btn btn-clear btn-xs", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete');
-        del.addEventListener("click", async () => {
-          if (!confirm("Delete " + u.username + "?")) return;
-          await api("/api/admin/user/" + encodeURIComponent(u.discord_id), { method: "DELETE" });
-          loadUsers();
-        });
-        const reset = el("button", "btn btn-clear btn-xs", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Reset usage');
-        reset.addEventListener("click", async () => {
-          if (!confirm("Reset optimization usage for " + u.username + "?")) return;
-          const _label = reset.innerHTML;
-          reset.disabled = true;
-          reset.textContent = "Resetting\u2026";
-          const r = await api("/api/admin/reset-usage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ discord_id: u.discord_id }) });
-          reset.disabled = false;
-          reset.innerHTML = _label;
-          if (!r) { alert("Reset failed: no response from the server."); return; }
-          if (r.status === 401 || r.status === 403) {
-            alert("Reset failed: your admin session has expired.\n\nReload this page, log in with the admin secret again, then try once more.");
-            return;
-          }
-          if (!r.ok) {
-            alert("Reset failed (HTTP " + r.status + "): " + ((r.json && (r.json.error || r.json.message)) || "unknown error"));
-            return;
-          }
-          loadUsers();
-        });
-        td.appendChild(reset);
-        td.appendChild(del);
-        tr.appendChild(td);
+        tr.appendChild(el("td", "", "<b>" + esc(u.username || u.name || "") + "</b><br><span class='dim'>" + esc(u.email || u.uid || u.discord_id || "") + "</span>"));
+        tr.appendChild(el("td", "mono", String(u.today_patches || 0)));
+        tr.appendChild(el("td", "", esc(u.tier || "premium")));
+        tr.appendChild(el("td", "mono dim", u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"));
+        tr.appendChild(el("td", "", ""));
         tbody.appendChild(tr);
       });
     }
-    ensurePager(pages, total);
-    } catch (err) {
-      console.error("loadUsers failed:", err);
-      if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="color:#ef4444">Failed to load users: ' + (err && err.message ? err.message : err) + '</td></tr>';
-    }
   }
 
-  /* ── TIERS page ══════════════════════════════════════════════ */
-  function ensureTierChoices(user) {
-    const b = $("#tier-cta");
-    if (!b) return;
-
-    let row = (b.parentElement && b.parentElement.classList.contains("tier-cta-row"))
-      ? b.parentElement : null;
-    if (!row) {
-      row = document.createElement("div");
-      row.className = "tier-cta-row";
-      b.insertAdjacentElement("beforebegin", row);
-      row.appendChild(b);
-    }
-
-    let tg = $("#tier-cta-tg");
-    if (!tg) {
-      tg = document.createElement("button");
-      tg.type = "button";
-      tg.id = "tier-cta-tg";
-      tg.className = "tier-cta-tg";
-      tg.innerHTML = TELEGRAM_SVG + "Login with Telegram";
-      row.appendChild(tg);
-      startTelegramLogin(tg);
-    }
-    tg.style.display = user ? "none" : "";
-  }
-
+  /* ── Tiers page ────────────────────────────────────────────── */
   function initTiers() {
-    api("/api/health").then((h) => { API_DISCORD = !!(h && h.json && h.json.discordConfigured); });
     api("/api/me").then((m) => {
       const { user } = normalizeMe(m && m.json);
       renderAuth(user, false);
-      ensureTierChoices(user);
       if (user && user.tier) {
         $$('.view[data-view="tiers"] .tier-card').forEach((c) => c.classList.toggle("mine", c.dataset.tier === user.tier.tier));
-        const b = $("#tier-cta");
-        if (b) { b.textContent = "Premium — Active"; b.classList.add("active"); }
       }
     });
   }
 
-  /* ── Discord logo + login popup ────────────────────────────── */
-  const DISCORD_SVG = '<svg class="dl-logo" viewBox="0 0 127.14 96.36" aria-hidden="true"><path fill="currentColor" d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0 105.89 105.89 0 0 0 19.39 8.09C2.79 32.65-1.71 56.6.54 80.21h0A105.73 105.73 0 0 0 32.71 96.36a77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1A105.25 105.25 0 0 0 126.6 80.22h0C129.24 52.84 122.09 29.11 107.7 8.07ZM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53 48.84 65.69 42.45 65.69Zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.45-12.74S96.23 46 96.12 53 91.08 65.69 84.69 65.69Z"/></svg>';
-  const TELEGRAM_SVG = '<svg class="dl-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>';
-  document.querySelectorAll("[data-discord]").forEach((el) => {
-    if (!el.querySelector(".dl-logo")) el.insertAdjacentHTML("afterbegin", DISCORD_SVG);
-  });
+  /* ── SVG icons ─────────────────────────────────────────────── */
+  const GOOGLE_SVG = '<svg class="dl-logo" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;flex-shrink:0;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>';
 
-  let API_DISCORD = true;
-  function openLogin() {
-    const ret = (location.pathname || "/") + (location.search || "");
-    location.href = "/api/discord?action=login&return=" + encodeURIComponent(ret);
-  }
-  function showLoginChoiceOverlay() {
-    let ov = document.getElementById("login-choice-modal");
-    if (!ov) {
-      ov = document.createElement("div");
-      ov.id = "login-choice-modal";
-      ov.className = "login-modal";
-      ov.innerHTML =
-        '<div class="login-modal-card" role="dialog" aria-modal="true" aria-label="Sign in">' +
-          '<button class="login-modal-x" type="button" aria-label="Close">&times;</button>' +
-          '<h2 class="login-modal-title">Sign in to optimize</h2>' +
-          '<p class="login-modal-sub">Choose how you want to sign in.</p>' +
-          '<a class="btn btn-discord" id="modal-dc" href="#">' + DISCORD_SVG + 'Login with Discord</a>' +
-          '<button class="btn btn-tg" type="button" id="modal-tg">' + TELEGRAM_SVG + 'Login with Telegram</button>' +
-        '</div>';
-      document.body.appendChild(ov);
-      ov.addEventListener("click", (e) => { if (e.target === ov) closeLoginChoiceOverlay(); });
-      ov.querySelector(".login-modal-x").addEventListener("click", closeLoginChoiceOverlay);
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeLoginChoiceOverlay();
-      });
-      ov.querySelector("#modal-dc").addEventListener("click", function (e) {
-        e.preventDefault();
-        const ret = (location.pathname || "/") + (location.search || "");
-        location.href = "/api/discord?action=login&return=" + encodeURIComponent(ret);
-      });
-      startTelegramLogin(ov.querySelector("#modal-tg"));
+  /* ═══════════════════════════════════════════════════════════════
+     FIREBASE AUTH — Google Sign-In
+     ═══════════════════════════════════════════════════════════════ */
+  let _firebaseAuth = null;
+  let _firebaseUser = null;
+  let _firebaseInitTried = false;
+
+  function initFirebaseClient() {
+    if (_firebaseAuth) return _firebaseAuth;
+    if (_firebaseInitTried) return null;
+    _firebaseInitTried = true;
+
+    if (!window.firebase || !window.RTX || !window.RTX.FIREBASE) {
+      console.warn("[JOHN_QUALITY] Firebase SDK or config missing.");
+      return null;
     }
-    ov.classList.add("show");
-    return true;
-  }
-
-  function closeLoginChoiceOverlay() {
-    const ov = document.getElementById("login-choice-modal");
-    if (ov) ov.classList.remove("show");
-  }
-
-  function requireLogin() {
     try {
-      showLoginChoiceOverlay();
-    } catch (err) {
-      openLogin();
+      if (!firebase.apps.length) firebase.initializeApp(window.RTX.FIREBASE);
+      _firebaseAuth = firebase.auth();
+      _firebaseAuth.onAuthStateChanged((u) => {
+        _firebaseUser = u;
+        if (u) {
+          u.getIdToken().then((idToken) => {
+            fetch("/api/auth/google", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken }),
+            })
+              .then((r) => r.json())
+              .then((d) => {
+                if (d.ok && d.sessionToken) {
+                  localStorage.setItem("jq_session", d.sessionToken);
+                  AUTH_USER = {
+                    username: d.user.name,
+                    display_name: d.user.name,
+                    avatar: d.user.picture,
+                    tier: { tier: "donor", tierLabel: "Premium", tierMB: 0, tierRes: "4K120", tierFPS: 120 },
+                  };
+                  AUTH_ME_RAW = d.user;
+                  AUTH_RESOLVED = true;
+                  renderAuth(AUTH_USER, false);
+                  renderTierCtas("donor");
+                }
+              })
+              .catch(() => {});
+          });
+        }
+      });
+      return _firebaseAuth;
+    } catch (e) {
+      console.error("[JOHN_QUALITY] Firebase init failed:", e);
+      return null;
     }
   }
 
-  document.addEventListener("click", (e) => {
-    const t = e.target.closest("#btn-login, [data-login]");
-    if (t) { e.preventDefault(); openLogin(); }
-  });
+  function signInWithGoogle() {
+    const auth = initFirebaseClient();
+    if (!auth) {
+      alert("Firebase is not configured. Check site-config.js.");
+      return;
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    auth.signInWithPopup(provider).catch((e) => {
+      if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") {
+        alert("Sign-in failed: " + e.message);
+      }
+    });
+  }
 
-  document.addEventListener("click", (e) => {
-    const b = e.target.closest(".tier-btn");
-    if (!b) return;
-    if (AUTH_USER) return;
-    if (!authConfirmedSignedOut()) return;
-    if (b.classList.contains("activated")) return;
-    e.preventDefault();
-    requireLogin();
-  });
+  async function signOutGoogle() {
+    try { if (_firebaseAuth) await _firebaseAuth.signOut(); } catch (e) {}
+    localStorage.removeItem("jq_session");
+    try { await fetch("/api/auth/logout", { method: "POST" }); } catch (e) {}
+    AUTH_USER = null;
+    AUTH_RESOLVED = true;
+    AUTH_STATE = null;
+    renderAuth(null, false);
+    renderTierCtas(null);
+    location.reload();
+  }
 
-  /* ── SPA router ── */
+  /* ── Router ────────────────────────────────────────────────── */
   const VIEWS = ["dashboard", "patcher", "analytics", "tiers", "howto", "admin", "login"];
   const INIT = {};
 
@@ -2479,15 +1495,7 @@
     const p = (location.pathname || "/").replace(/^\/+/, "").split("/")[0];
     return VIEWS.includes(p) ? p : "dashboard";
   }
-
   function pathFor(view) { return view === "dashboard" ? "/" : "/" + view; }
-
-  function navigate(path, replace) {
-    try { (replace ? history.replaceState : history.pushState).call(history, {}, "", path); }
-    catch { location.href = path; return; }
-    showView(currentView());
-  }
-
   function isRouteHref(href) {
     if (!href || /^(https?:)?\/\//.test(href) || href.startsWith("/api/") || href.startsWith("#")) return false;
     const seg = href.replace(/^\/+/, "").split(/[?#]/)[0].split("/")[0];
@@ -2497,7 +1505,7 @@
   document.addEventListener("click", (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest("a[href]");
-    if (!a || a.target === "_blank" || a.hasAttribute("data-discord-link") || a.hasAttribute("data-login")) return;
+    if (!a || a.target === "_blank") return;
     const href = a.getAttribute("href");
     if (!isRouteHref(href)) return;
     const view = href === "/" ? "dashboard" : href.replace(/^\/+/, "").split(/[?#]/)[0].split("/")[0];
@@ -2524,285 +1532,113 @@
   }
 
   function initLoginView() {
-    if ((location.search || "").indexOf("tg_join=1") !== -1) return;
     api("/api/me").then((m) => {
       const { user } = normalizeMe(m && m.json);
       if (user) { location.replace("/"); return; }
-      showLoginChoice();
-    });
-  }
-
-  var TG_BOT_ID = 8904316195;
-  var tgWidgetLoading = false;
-
-  function telegramStockWidget(slot) {
-    var s = document.createElement("script");
-    s.async = true;
-    s.src = "https://telegram.org/js/telegram-widget.js?22";
-    s.setAttribute("data-telegram-login", "JOHN_QUALITYBot");
-    s.setAttribute("data-size", "large");
-    s.setAttribute("data-radius", "10");
-    s.setAttribute("data-userpic", "false");
-    s.setAttribute("data-lang", "en");
-    s.setAttribute("data-auth-url", "https://www.johnquality.xyz/api/auth/telegram");
-    slot.appendChild(s);
-  }
-
-  function showLoginChoice() {
-    const card = document.querySelector(".login-card");
-    if (!card) { location.replace("/api/discord?action=login"); return; }
-    card.classList.add("login-choice");
-    card.innerHTML =
-      '<h1 id="login-title">Sign in</h1>' +
-      '<a class="btn" id="login-go" href="/api/discord?action=login">Login with Discord</a>' +
-      '<a class="btn" id="tg-login-go" href="#" role="button">Login with Telegram</a>' +
-      '<div id="tg-login-slot" class="login-tg-slot" hidden></div>';
-
-    const tgBtn = card.querySelector("#tg-login-go");
-    const slot = card.querySelector("#tg-login-slot");
-    if (!tgBtn || !slot) return;
-    startTelegramLogin(tgBtn, slot);
-  }
-
-  function startTelegramLogin(tgBtn, slot) {
-    if (!tgBtn) return;
-    if (!slot) {
-      slot = document.createElement("div");
-      slot.className = "login-tg-slot";
-      slot.hidden = true;
-      tgBtn.insertAdjacentElement("afterend", slot);
-    }
-
-    let tgDeep = null;
-    api("/api/tg/start", { cache: "no-store" }).then((r) => {
-      const d = r && r.json;
-      if (d && d.ok && d.url && d.nonce) tgDeep = d;
-    });
-
-    function useStockWidget() {
-      tgBtn.hidden = true;
-      slot.hidden = false;
-      if (!slot.childNodes.length) telegramStockWidget(slot);
-    }
-
-    if (!tgWidgetLoading) {
-      tgWidgetLoading = true;
-      const loader = document.createElement("script");
-      loader.async = true;
-      loader.src = "https://telegram.org/js/telegram-widget.js?22";
-      loader.onerror = useStockWidget;
-      loader.onload = function () {
-        if (!(window.Telegram && window.Telegram.Login && window.Telegram.Login.auth)) useStockWidget();
-      };
-      document.head.appendChild(loader);
-    }
-
-    tgBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      if (tgDeep) {
-        tgAuthPark(tgDeep.nonce);
-   const win = window.open(tgDeep.url, "_blank");
-        if (win) { tgDeepPoll(tgDeep.nonce); return; }
-        tgAuthPark(tgDeep.nonce);
-        location.href = tgDeep.url;
-        return;
-      }
-      if (!(window.Telegram && window.Telegram.Login && window.Telegram.Login.auth)) { useStockWidget(); return; }
-      window.Telegram.Login.auth({ bot_id: TG_BOT_ID, request_access: false, lang: "en" }, function (user) {
-        if (!user || !user.hash) return;
-        location.href = "/api/auth/telegram?" + new URLSearchParams(user).toString();
-      });
+      const card = document.querySelector(".login-card");
+      if (!card) return;
+      const gBtn = card.querySelector("#google-signin-btn");
+      if (gBtn) gBtn.onclick = signInWithGoogle;
+      initFirebaseClient();
     });
   }
 
   window.addEventListener("popstate", () => showView(currentView()));
 
-  const LOGIN_ERROR_MSG = {
-    not_in_server:        "You must be in the Discord server to log in.",
-    not_in_channel:       "You're not in our Telegram channel yet — join it first, then log in again.",
-    telegram_failed:      "Telegram login failed or expired — please try again.",
-    join_declined:        'You un-checked "Join server" on the Discord screen. Log in again and leave it checked so we can add you to the server.',
-    join_failed:          "We could not add you to the Discord server right now (is it full?). Please try again, or join manually below.",
-    invalid_state:        "Login session expired — please try again.",
-    missing_params:       "Login session expired — please try again.",
-    token_exchange_failed: "Discord authorization failed — please try again.",
-    user_fetch_failed:    "Could not load your Discord profile — please try again.",
-    oauth_failed:         "Login failed — please try again.",
-    access_denied:        "You cancelled the Discord login. Click below when you are ready.",
-  };
-  function showLoginErrorBanner() {
-    const code = new URLSearchParams(location.search).get("login_error");
-    if (!code) return;
-    const msg = LOGIN_ERROR_MSG[code] || "Login failed — please try again.";
-    const box = el("div", "", "");
-    box.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;padding:12px 18px;font:600 14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.4);";
-    let links = '<a href="/api/discord?action=login" style="color:#fff;font-weight:800;text-decoration:underline;margin-left:10px;white-space:nowrap;">Log in again</a>';
-    if (code === "not_in_channel" && window.RTX && window.RTX.TELEGRAM_INVITE) {
-      links += '<a href="' + esc(window.RTX.TELEGRAM_INVITE) + '" target="_blank" rel="noopener" style="color:#fff;font-weight:800;text-decoration:underline;margin-left:12px;white-space:nowrap;">Join Telegram channel</a>';
-      if (window.RTX.TELEGRAM_BOT) {
-        links += '<a href="' + esc(window.RTX.TELEGRAM_BOT) + '" target="_blank" rel="noopener" style="color:#fff;font-weight:800;text-decoration:underline;margin-left:12px;white-space:nowrap;">Open @JOHN_QUALITYBot</a>';
-      }
+  /* ── Auth state ────────────────────────────────────────────── */
+  let AUTH_STATE = null;
+  let AUTH_USER = null;
+  let AUTH_ME_RAW = null;
+  let AUTH_RESOLVED = false;
+  const AUTH_LS_KEY = "johnquality:last";
+
+  function authConfirmedSignedOut() { return AUTH_RESOLVED && !AUTH_USER; }
+
+  function readCachedAuth() {
+    try { const raw = localStorage.getItem(AUTH_LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  }
+  function writeCachedAuth(user) {
+    try {
+      if (user) localStorage.setItem(AUTH_LS_KEY, JSON.stringify(user));
+      else localStorage.removeItem(AUTH_LS_KEY);
+    } catch {}
+  }
+  function clearCachedAuth() { writeCachedAuth(null); }
+
+  function applyAuthState(user, devMode) {
+    AUTH_USER = user;
+    renderAuth(user, devMode);
+    renderTierCtas(user && user.tier && user.tier.tier);
+  }
+
+  function loadAuthState() {
+    if (AUTH_STATE) return AUTH_STATE;
+
+    // 1. Try the cached signed-in user for instant paint
+    if (!AUTH_USER) {
+      const c = readCachedAuth();
+      if (c) applyAuthState(c, false);
     }
-    if ((code === "not_in_server" || code === "join_failed") && window.RTX && window.RTX.DISCORD_INVITE) {
-      links += '<a href="' + esc(window.RTX.DISCORD_INVITE) + '" target="_blank" rel="noopener" style="color:#fff;font-weight:800;text-decoration:underline;margin-left:12px;white-space:nowrap;">Join server</a>';
+
+    // 2. Initialize Firebase (idempotent)
+    const auth = initFirebaseClient();
+
+    // 3. Check for a stored session JWT
+    const stored = localStorage.getItem("jq_session");
+    if (stored) {
+      try {
+        const payload = JSON.parse(atob(stored.split(".")[1]));
+        if (payload && payload.exp * 1000 > Date.now()) {
+          const u = {
+            username: payload.name || "User",
+            display_name: payload.name || "User",
+            avatar: payload.picture || null,
+            tier: { tier: "donor", tierLabel: "Premium", tierMB: 0, tierRes: "4K120", tierFPS: 120 },
+          };
+          AUTH_USER = u;
+          AUTH_ME_RAW = payload;
+          AUTH_RESOLVED = true;
+          AUTH_STATE = Promise.resolve(u);
+          renderAuth(u, false);
+          renderTierCtas("donor");
+          return AUTH_STATE;
+        }
+      } catch (e) {}
     }
-    box.innerHTML = "<span>" + esc(msg) + "</span>" + links +
-      '<button type="button" aria-label="Dismiss" style="margin-left:12px;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;vertical-align:middle;">&times;</button>';
-    document.body.prepend(box);
-    box.querySelector("button").addEventListener("click", () => {
-      box.remove();
-      try { history.replaceState({}, "", location.pathname); } catch {}
+
+    // 4. No session — signed out
+    AUTH_RESOLVED = true;
+    AUTH_STATE = Promise.resolve(null);
+    renderAuth(null, false);
+    renderTierCtas(null);
+    return AUTH_STATE;
+  }
+
+  function syncAuthFromMe(json) {
+    const { user } = normalizeMe(json);
+    const next = (user && user.tier && user.tier.tier) || null;
+    const prev = (AUTH_USER && AUTH_USER.tier && AUTH_USER.tier.tier) || null;
+    if (next !== prev) applyAuthState(user, false);
+    return user;
+  }
+
+  /* ── Tier CTAs ─────────────────────────────────────────────── */
+  const CTA_TIER = { "join server": "member", "join": "donor" };
+  function renderTierCtas(tierKey) {
+    $$(".tier-btn").forEach((b) => {
+      if (!b.dataset.baseLabel) b.dataset.baseLabel = (b.textContent || "").trim();
+      const card = b.closest("[data-tier]");
+      const key = (card && card.dataset.tier) || CTA_TIER[b.dataset.baseLabel.toLowerCase()] || null;
+      if (!key) return;
+      const mine = !!tierKey && key === tierKey;
+      b.textContent = mine ? "Activated" : b.dataset.baseLabel;
+      b.classList.toggle("activated", mine);
+      if (mine) { b.setAttribute("aria-disabled", "true"); b.setAttribute("tabindex", "-1"); }
+      else { b.removeAttribute("aria-disabled"); b.removeAttribute("tabindex"); }
     });
   }
 
-  window.RTX = window.RTX || {};
-  window.RTX.TELEGRAM_INVITE = window.RTX.TELEGRAM_INVITE || "https://t.me/JOHN_QUALITYYT";
-  window.RTX.TELEGRAM_CHANNEL = "@JOHN_QUALITYYT";
-  window.RTX.TELEGRAM_BOT = window.RTX.TELEGRAM_BOT || "https://t.me/JOHN_QUALITYBot?start=site";
-  window.RTX.TELEGRAM_BOT_HANDLE = window.RTX.TELEGRAM_BOT_HANDLE || "@JOHN_QUALITYBot";
-
-  (function forwardTelegramLogin() {
-    try {
-      const q = location.search || "";
-      if (q.indexOf("hash=") === -1 || q.indexOf("auth_date=") === -1) return;
-      if (q.indexOf("tg_join=1") !== -1) return;
-      location.replace("/api/auth/telegram" + q);
-    } catch (e) {}
-  })();
-
-  function telegramJoinPoll(params) {
-    const clear = () => { try { sessionStorage.removeItem("rtx_tg_pending"); } catch (e) {} };
-    let tries = 0;
-    const tick = () => {
-      if (tries++ > 150) { clear(); return; }
-      fetch("/api/tg/status?" + params, { credentials: "include" })
-        .then((r) => r.json())
-        .then((j) => {
-          if (j && j.member) { clear(); location.replace("/api/auth/telegram?" + params); return; }
-          setTimeout(tick, 4000);
-        })
-        .catch(() => setTimeout(tick, 4000));
-    };
-    setTimeout(tick, 2000);
-  }
-
-  function showTelegramJoin(params) {
-    const card = document.querySelector(".login-card");
-    if (!card) { location.replace("/api/auth/telegram?" + params); return; }
-    const bot = (window.RTX && window.RTX.TELEGRAM_BOT) || "https://t.me/JOHN_QUALITYBot?start=welcome";
-    const handle = (window.RTX && window.RTX.TELEGRAM_BOT_HANDLE) || "@JOHN_QUALITYBot";
-    try { sessionStorage.setItem("rtx_tg_pending", params); } catch (e) {}
-    card.classList.add("login-choice");
-    card.innerHTML =
-      '<h1 id="login-title">Taking you to Telegram&hellip;</h1>' +
-      '<p id="login-msg" style="opacity:.8;font-size:13px">Press <b>Start</b> in the bot and join the channel &mdash; this page signs you in as soon as you do.</p>' +
-      '<a class="btn" id="tg-open-bot" href="' + esc(bot) + '" target="_blank" rel="noopener" hidden>Open ' + esc(handle) + '</a>';
-    const openBtn = card.querySelector("#tg-open-bot");
-    let win = null;
-    try { win = window.open(bot, "_blank"); } catch (e) {}
-    if (!win && openBtn) {
-      openBtn.hidden = false;
-      const t = card.querySelector("#login-title");
-      const m = card.querySelector("#login-msg");
-      if (t) t.textContent = "Open Telegram to finish";
-      if (m) m.innerHTML = "Telegram did not open by itself. Tap the button &mdash; the bot opens in a <b>new tab</b> and this page stays here, signing you in the moment you join the channel.";
-    }
-    telegramJoinPoll(params);
-  }
-
-  (function telegramJoinScreen() {
-    try {
-      const q = location.search || "";
-      if (q.indexOf("tg_join=1") === -1) return;
-      const params = q.replace(/^\?/, "").split("&")
-        .filter((kv) => kv.indexOf("tg_join=") !== 0).join("&");
-      const start = () => showTelegramJoin(params);
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
-      else start();
-    } catch (e) {}
-  })();
-
-  (function resumeTelegramJoin() {
-    try {
-      const params = sessionStorage.getItem("rtx_tg_pending");
-      if (!params) return;
-      if ((location.search || "").indexOf("tg_join=1") !== -1) return;
-       telegramJoinPoll(params);
-     } catch (e) {}
-   })();
-
-   const TG_AUTH_KEY = "rtx_tg_auth";
-   const TG_AUTH_TTL_MS = 30 * 60 * 1000;
-   let tgAuthGen = 0;
-
-   function tgAuthPark(nonce) {
-     try { localStorage.setItem(TG_AUTH_KEY, JSON.stringify({ nonce: nonce, ts: Date.now() })); } catch (e) {}
-   }
-
-   function tgAuthClear() {
-     try { localStorage.removeItem(TG_AUTH_KEY); } catch (e) {}
-   }
-
-   function tgAuthPending() {
-     try {
-       const raw = localStorage.getItem(TG_AUTH_KEY);
-       if (!raw) return null;
-       const v = JSON.parse(raw);
-       if (!v || !v.nonce) { tgAuthClear(); return null; }
-       if (Date.now() - (v.ts || 0) > TG_AUTH_TTL_MS) { tgAuthClear(); return null; }
-       return v.nonce;
-     } catch (e) { tgAuthClear(); return null; }
-   }
-
-   function tgDeepPoll(nonce) {
-     const gen = ++tgAuthGen;
-     tgAuthPark(nonce);
-     let tries = 0;
-     const tick = () => {
-       if (gen !== tgAuthGen) return;
-       if (tries++ >= 300) { tgAuthClear(); return; }
-       api("/api/tg/poll?nonce=" + encodeURIComponent(nonce), { cache: "no-store" }).then((r) => {
-         const d = r && r.json;
-         if (d && d.ok === false) { tgAuthClear(); return; }
-         if (d && d.confirmed && d.member) { tgAuthClear(); location.replace(d.redirect || "/patcher"); return; }
-         setTimeout(tick, 2000);
-       });
-     };
-     setTimeout(tick, 1500);
-   }
-
-  let tgLinkDeep = null;
-  (function telegramLoginLinks() {
-    try {
-      api("/api/tg/start", { cache: "no-store" }).then((r) => {
-        const d = r && r.json;
-        if (d && d.ok && d.url && d.nonce) tgLinkDeep = d;
-      });
-    } catch (e) {}
-    document.addEventListener("click", function (e) {
-      const t = e.target;
-      const link = t && t.closest ? t.closest("[data-tg-login]") : null;
-      if (!link) return;
-      e.preventDefault();
-      if (!tgLinkDeep) {
-        location.href = link.getAttribute("href") || "https://t.me/JOHN_QUALITYBot";
-        return;
-      }
-      tgAuthPark(tgLinkDeep.nonce);
-      const win = window.open(tgLinkDeep.url, "_blank");
-      if (win) { tgDeepPoll(tgLinkDeep.nonce); return; }
-      location.href = tgLinkDeep.url;
-    });
-  })();
-
-  (function resumeTelegramDeep() {
-    try {
-      if ((location.search || "").indexOf("tg_join=1") !== -1) return;
-      const nonce = tgAuthPending();
-      if (nonce) tgDeepPoll(nonce);
-    } catch (e) {}
-  })();
-
+  /* ── Best upload times ─────────────────────────────────────── */
   function initBestTimes() {
     const btn = document.getElementById("btCheckBtn");
     if (!btn) return;
@@ -2820,14 +1656,13 @@
       try {
         const r = await fetch("/api/besttime", {
           method: "POST",
-          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: u }),
         });
         const d = await r.json();
         if (loading) loading.style.display = "none";
         if (!d || d.error) { showErr((d && d.error) || "Couldn't look up that profile."); return; }
-        if (!d.has_data) { showErr("Not enough public videos yet to estimate your best times."); return; }
+        if (!d.has_data) { showErr("Not enough public videos yet."); return; }
         renderBestTimes(d);
       } catch (e) {
         if (loading) loading.style.display = "none";
@@ -2861,67 +1696,22 @@
     out.style.display = "block";
   }
 
-  let AUTH_STATE = null;
-  let AUTH_USER = null;
-  let AUTH_DEV = false;
-  let AUTH_ME_RAW = null;
-  let AUTH_RESOLVED = false;
-  const AUTH_LS_KEY = "johnquality:last";
-
-  function authConfirmedSignedOut() { return AUTH_RESOLVED && !AUTH_USER; }
-
-  function readCachedAuth() {
-    try { const raw = localStorage.getItem(AUTH_LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
-  }
-  function writeCachedAuth(user) {
-    try {
-      if (user) localStorage.setItem(AUTH_LS_KEY, JSON.stringify(user));
-      else localStorage.removeItem(AUTH_LS_KEY);
-    } catch {}
-  }
-  function clearCachedAuth() { writeCachedAuth(null); }
-
-  function applyAuthState(user, devMode) {
-    AUTH_USER = user;
-    AUTH_DEV = !!devMode;
-    renderAuth(user, devMode);
-    renderTierCtas(user && user.tier && user.tier.tier);
-  }
-  function loadAuthState() {
-    if (AUTH_STATE) return AUTH_STATE;
-    if (!AUTH_USER) { const c = readCachedAuth(); if (c) applyAuthState(c, false); }
-    const meP = api("/api/me");
-    const healthP = api("/api/health");
-    AUTH_STATE = meP.then((m) => {
-      AUTH_ME_RAW = (m && m.json) || null;
-      const { user } = normalizeMe(m && m.json);
-      return healthP.then((h) => {
-        API_DISCORD = !!(h && h.json && h.json.discordConfigured);
-        applyAuthState(user, !!(h && h.json && h.json.devMode));
-        writeCachedAuth(user);
-        AUTH_RESOLVED = true;
-        return user;
-      });
-    }).catch(() => { AUTH_RESOLVED = true; return null; });
-    return AUTH_STATE;
-  }
-  function syncAuthFromMe(json) {
-    const { user } = normalizeMe(json);
-    const next = (user && user.tier && user.tier.tier) || null;
-    const prev = (AUTH_USER && AUTH_USER.tier && AUTH_USER.tier.tier) || null;
-    if (next !== prev) applyAuthState(user, AUTH_DEV);
-    return user;
-  }
-
+  /* ── Boot ──────────────────────────────────────────────────── */
   function boot() {
-    try {
-      const stale = ["/api/me"];
-      stale.forEach((k) => sessionStorage.removeItem("rtxcache:" + k));
-    } catch {}
+    try { sessionStorage.removeItem("jqcache:/api/me"); } catch {}
     initReveal();
-    showLoginErrorBanner();
     initBestTimes();
+
+    // Kick off Firebase as early as possible
+    initFirebaseClient();
+
+    // Load the auth state
     loadAuthState();
+
+    // Attach the Google button on the /login view (if present)
+    const gBtn = document.getElementById("google-signin-btn");
+    if (gBtn) gBtn.onclick = signInWithGoogle;
+
     const v = window.__VIEW__ || currentView();
     if (location.hash) {
       try { history.replaceState({}, "", pathFor(v) + (location.search || "")); } catch {}
@@ -2933,19 +1723,16 @@
 })();
 
 /* ═══════════════════════════════════════════════════════════════
-   Payment badges — injected into the footer of every page.
+   Payment badges (footer)
    ═══════════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
-
   var G = {
     google: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>',
     crypto: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="overflow:visible"><path d="M16 8a6 6 0 1 0 0 8" stroke="#F7931A" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M10 4v4M13 4v4M10 16v4M13 16v4" stroke="#F7931A" stroke-width="2" stroke-linecap="round"/></svg>',
     bank: '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M12 2.5 2 8.5h20L12 2.5z" fill="#1a1a1a"/><rect x="6.5" y="10.5" width="2.2" height="7" fill="#1a1a1a"/><rect x="10.9" y="10.5" width="2.2" height="7" fill="#1a1a1a"/><rect x="15.3" y="10.5" width="2.2" height="7" fill="#1a1a1a"/><rect x="3.5" y="17.5" width="17" height="2.6" rx="0.8" fill="#1a1a1a"/></svg>'
   };
-
   var IMG = "assets/payments/";
-
   var BADGES = [
     ["Visa", '<span class="pv-visa">VISA</span>'],
     ["Mastercard", '<img class="pv-img" src="' + IMG + 'mastercard.jpg" alt="Mastercard">'],
@@ -2959,7 +1746,6 @@
     ["Remitly", '<img class="pv-img" src="' + IMG + 'remitly.jpg" alt="Remitly">'],
     ["Bank transfer", G.bank + "<b>Bank transfer</b>"]
   ];
-
   function injectPayments() {
     var footer = document.querySelector(".site-footer");
     if (!footer || document.querySelector(".footer-payments")) return;
@@ -2982,12 +1768,11 @@
     var bottom = footer.querySelector(".footer-bottom");
     footer.insertBefore(box, bottom);
   }
-
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", injectPayments);
   else injectPayments();
 })();
 
-/* Giveaway countdown. */
+/* ── Giveaway countdown ─────────────────────────────────────── */
 (function () {
   const start = () => {
     const els = Array.from(document.querySelectorAll("[data-giveaway-ends]"));
@@ -3009,8 +1794,7 @@
   else start();
 })();
 
-
-/* ── STALE-TAB GUARD ────────────────────────────────────────────────────────── */
+/* ── Stale-tab guard ────────────────────────────────────────── */
 (function () {
   try {
     var here = (document.currentScript && document.currentScript.src) || "";
@@ -3028,5 +1812,5 @@
     }
     setTimeout(check, 10000);
     setInterval(check, 60000);
-  } catch (e) { /* a version check must never break the page */ }
+  } catch (e) {}
 })();
