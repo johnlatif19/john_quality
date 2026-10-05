@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    JOHN_QUALITY — Backend server
-   Railway + multer + Cloudinary + Firebase + FFmpeg
+   Railway + multer (disk) + Cloudinary + Firebase + FFmpeg (low-mem)
    ═══════════════════════════════════════════════════════════════ */
 
 "use strict";
@@ -33,6 +33,7 @@ const SECRET         = process.env.JQ_SECRET || "john_quality_default_secret_cha
 const ADMIN_SECRET   = process.env.ADMIN_SECRET || "admin_change_me";
 const CF_FOLDER      = process.env.CLOUDINARY_FOLDER || "john_quality";
 const ENCODER_TAG    = "JOHN_QUALITY - https://www.johnquality.xyz/ - v2.0";
+const MAX_UPLOAD_MB  = 2000; // 2 GB
 
 /* ── Firebase Admin init ────────────────────────────────────── */
 let firebaseReady = false;
@@ -71,10 +72,15 @@ function cloudinaryReady() {
   return !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 }
 
-/* ── Multer (in-memory) ─────────────────────────────────────── */
+/* ── Multer (DISK storage — low memory) ─────────────────────── */
+const uploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, os.tmpdir()),
+  filename: (req, file, cb) =>
+    cb(null, "jq_upload_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex") + ".mp4"),
+});
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB
+  storage: uploadStorage,
+  limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024 },
 });
 
 /* ── In-memory stores ───────────────────────────────────────── */
@@ -163,10 +169,11 @@ app.get("/api/health", (req, res) => {
     engine: "JOHN_QUALITY v2.0",
     firebase: firebaseReady,
     cloudinary: cloudinaryReady(),
+    maxUploadMB: MAX_UPLOAD_MB,
   });
 });
 
-/* ── FFmpeg check (debug) ───────────────────────────────────── */
+/* ── FFmpeg check ───────────────────────────────────────────── */
 app.get("/api/ffmpeg-check", async (req, res) => {
   try {
     const { stdout } = await execFileAsync("ffmpeg", ["-version"]);
@@ -390,20 +397,20 @@ app.get("/api/patch-rtx/latest-job", (req, res) => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN PATCH ENDPOINT — multipart/form-data (multer)
+   MAIN PATCH ENDPOINT — multipart (multer to disk)
    ═══════════════════════════════════════════════════════════════ */
 app.post("/api/patch-rtx", requireToken, upload.single("file"), async (req, res) => {
-  if (!req.file || !req.file.buffer || req.file.buffer.length === 0) {
+  if (!req.file || !req.file.path) {
     return res.status(400).json({ ok: false, error: "No file received." });
   }
-  const raw = req.file.buffer;
+  const inPath = req.file.path;
   const filename = String(req.file.originalname || req.headers["x-filename"] || "input.mp4");
 
-  console.log(`[patch-rtx] Received ${filename} (${(raw.length / 1048576).toFixed(2)} MB)`);
+  console.log(`[patch-rtx] Received ${filename} (${(req.file.size / 1048576).toFixed(2)} MB)`);
 
   try {
-    // 1) Patch the MP4 with FFmpeg (remux + metadata)
-    const patched = await patchMp4(raw);
+    // 1) Patch the MP4 with FFmpeg (stream copy, low memory)
+    const patched = await patchMp4FromPath(inPath);
     console.log(`[patch-rtx] Patched to ${(patched.length / 1048576).toFixed(2)} MB`);
 
     // 2) Try to upload the result to Cloudinary (non-fatal if it fails)
@@ -433,46 +440,80 @@ app.post("/api/patch-rtx", requireToken, upload.single("file"), async (req, res)
   } catch (e) {
     console.error("[patch-rtx] failed:", e);
     res.status(500).json({ ok: false, error: e.message || "Patch failed." });
+  } finally {
+    try { fs.unlinkSync(inPath); } catch (e) {}
   }
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   MP4 PATCHER — FFmpeg-based (safe, player-compatible)
+   MP4 PATCHER — FFmpeg-based (low memory, streaming)
    ═══════════════════════════════════════════════════════════════ */
-async function patchMp4(raw) {
+
+/* Patch a file that already exists on disk (from multer) */
+async function patchMp4FromPath(inPath) {
   const tmpDir = os.tmpdir();
   const id = crypto.randomBytes(8).toString("hex");
-  const inPath = path.join(tmpDir, "jq_in_" + id + ".mp4");
   const outPath = path.join(tmpDir, "jq_out_" + id + ".mp4");
 
   try {
-    fs.writeFileSync(inPath, raw);
+    const inSize = fs.statSync(inPath).size;
+    console.log(`[patchMp4FromPath] input: ${(inSize / 1048576).toFixed(2)} MB`);
 
-    // Remux + metadata, no re-encode (stream copy). Safe and fast.
+    // Low-memory settings:
+    //   -threads 1        : single thread — much lower peak RAM
+    //   -c copy           : no re-encode, just remux
+    //   -movflags +faststart : moov at front
+    //   -maxbuffer 10 MB  : don't accumulate ffmpeg's stdout
     await execFileAsync("ffmpeg", [
       "-y",
+      "-threads", "1",
       "-fflags", "+genpts",
       "-err_detect", "ignore_err",
       "-i", inPath,
       "-c", "copy",
-      "-map", "0",
       "-movflags", "+faststart",
       "-metadata", "encoder=" + ENCODER_TAG,
       "-metadata", "comment=Optimized by JOHN_QUALITY",
       outPath,
-    ], { timeout: 120000, maxBuffer: 200 * 1024 * 1024 });
+    ], {
+      timeout: 600000,               // 10 minutes max
+      maxBuffer: 10 * 1024 * 1024,   // 10 MB stdout buffer only
+    });
 
-    const patched = fs.readFileSync(outPath);
-    if (!patched || patched.length < 1024) {
+    const stat = fs.statSync(outPath);
+    console.log(`[patchMp4FromPath] output: ${(stat.size / 1048576).toFixed(2)} MB`);
+
+    if (!stat.size || stat.size < 1024) {
       throw new Error("ffmpeg produced an empty output");
     }
-    return patched;
+
+    // Read output in 1 MB chunks to avoid a huge single allocation
+    const chunks = [];
+    const stream = fs.createReadStream(outPath, { highWaterMark: 1024 * 1024 });
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
   } catch (e) {
-    console.error("[patchMp4] ffmpeg failed:", e.message);
+    console.error("[patchMp4FromPath] ffmpeg failed:", e.message);
     throw new Error("Video optimization failed: " + (e.message || "unknown error"));
   } finally {
-    try { fs.unlinkSync(inPath); } catch (e) {}
     try { fs.unlinkSync(outPath); } catch (e) {}
+  }
+}
+
+/* Legacy in-memory version (kept for safety — not used by the endpoint) */
+async function patchMp4(raw) {
+  const tmpDir = os.tmpdir();
+  const id = crypto.randomBytes(8).toString("hex");
+  const inPath = path.join(tmpDir, "jq_in_" + id + ".mp4");
+
+  try {
+    fs.writeFileSync(inPath, raw);
+    raw = null;
+    return await patchMp4FromPath(inPath);
+  } finally {
+    try { fs.unlinkSync(inPath); } catch (e) {}
   }
 }
 
@@ -552,7 +593,7 @@ app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   if (res.headersSent) return next(err);
   if (err.code === "LIMIT_FILE_SIZE") {
-    return res.status(413).json({ ok: false, error: "File too large (max 2 GB)." });
+    return res.status(413).json({ ok: false, error: `File too large (max ${MAX_UPLOAD_MB} MB).` });
   }
   res.status(500).json({ ok: false, error: err.message || "Internal server error" });
 });
@@ -563,17 +604,18 @@ if (require.main === module || process.env.VERCEL !== "1") {
     console.log("╔══════════════════════════════════════════════╗");
     console.log("║     JOHN_QUALITY Backend v2.0                ║");
     console.log("║     Railway · Google · Firestore · Cloudinary ║");
-    console.log("║     FFmpeg-based patcher                     ║");
+    console.log("║     FFmpeg-based patcher (low-memory)        ║");
     console.log("╚══════════════════════════════════════════════╝");
     console.log(`  Port         : ${PORT}`);
     console.log(`  Public URL   : ${PUBLIC_BASE}`);
     console.log(`  Firebase     : ${firebaseReady ? "✓" : "✗"}`);
     console.log(`  Cloudinary   : ${cloudinaryReady() ? "✓" : "✗"}`);
+    console.log(`  Max upload   : ${MAX_UPLOAD_MB} MB`);
     console.log("");
-    // Verify ffmpeg is available
+
     execFileAsync("ffmpeg", ["-version"])
       .then((r) => console.log("  FFmpeg       : ✓ " + r.stdout.split("\n")[0]))
-      .catch(() => console.warn("  FFmpeg       : ✗ NOT FOUND — install it in nixpacks.toml"));
+      .catch(() => console.warn("  FFmpeg       : ✗ NOT FOUND — install it via nixpacks.toml"));
   });
 }
 
