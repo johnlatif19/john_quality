@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    JOHN_QUALITY — Backend server
-   Railway + multer (disk) + Cloudinary + Firebase + FFmpeg (low-mem)
+   Railway + multer (disk) + Cloudinary + Firebase + FFmpeg streaming
    ═══════════════════════════════════════════════════════════════ */
 
 "use strict";
@@ -14,7 +14,7 @@ const jwt = require("jsonwebtoken");
 const { v2: cloudinary } = require("cloudinary");
 const admin = require("firebase-admin");
 const multer = require("multer");
-const { execFile } = require("child_process");
+const { execFile, spawn } = require("child_process");
 const { promisify } = require("util");
 const fs = require("fs");
 const os = require("os");
@@ -34,6 +34,7 @@ const ADMIN_SECRET   = process.env.ADMIN_SECRET || "admin_change_me";
 const CF_FOLDER      = process.env.CLOUDINARY_FOLDER || "john_quality";
 const ENCODER_TAG    = "JOHN_QUALITY - https://www.johnquality.xyz/ - v2.0";
 const MAX_UPLOAD_MB  = 2000; // 2 GB
+const FFMPEG_TIMEOUT = 600000; // 10 minutes
 
 /* ── Firebase Admin init ────────────────────────────────────── */
 let firebaseReady = false;
@@ -357,7 +358,7 @@ app.post("/api/patch-rtx/local-release", requireToken, express.json(), (req, res
   res.json({ ok: true });
 });
 
-/* ── Cloudinary upload helper ───────────────────────────────── */
+/* ── Cloudinary upload helper (from buffer) ─────────────────── */
 function uploadToCloudinary(buffer, filename) {
   return new Promise((resolve, reject) => {
     if (!cloudinaryReady()) return reject(new Error("Cloudinary not configured."));
@@ -397,48 +398,84 @@ app.get("/api/patch-rtx/latest-job", (req, res) => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN PATCH ENDPOINT — multipart (multer to disk)
+   MAIN PATCH ENDPOINT — STREAMING (low memory)
    ═══════════════════════════════════════════════════════════════ */
 app.post("/api/patch-rtx", requireToken, upload.single("file"), async (req, res) => {
   if (!req.file || !req.file.path) {
     return res.status(400).json({ ok: false, error: "No file received." });
   }
+
   const inPath = req.file.path;
   const filename = String(req.file.originalname || req.headers["x-filename"] || "input.mp4");
+  const outPath = path.join(os.tmpdir(), "jq_out_" + crypto.randomBytes(8).toString("hex") + ".mp4");
 
   console.log(`[patch-rtx] Received ${filename} (${(req.file.size / 1048576).toFixed(2)} MB)`);
 
   try {
-    // 1) Patch the MP4 with FFmpeg (stream copy, low memory)
-    const patched = await patchMp4FromPath(inPath);
-    console.log(`[patch-rtx] Patched to ${(patched.length / 1048576).toFixed(2)} MB`);
+    // 1) Patch with ffmpeg to disk — stream copy, low memory
+    await runFfmpegLowMem(inPath, outPath);
 
-    // 2) Try to upload the result to Cloudinary (non-fatal if it fails)
-    let result = null;
-    try {
-      result = await uploadToCloudinary(patched, filename);
-      const jobId = newId(24);
-      jobs.set(jobId, {
-        url: result.secure_url,
-        publicId: result.public_id,
-        name: filename,
-        size: patched.length,
-        expiresAt: Date.now() + JOB_TTL_MS,
-        finishedAt: Date.now(),
-      });
-      res.setHeader("X-Job-Id", jobId);
-      res.setHeader("X-Cloudinary-Url", result.secure_url);
-      console.log(`[patch-rtx] Uploaded to Cloudinary: ${result.secure_url}`);
-    } catch (e) {
-      console.warn("[patch-rtx] Cloudinary upload failed, serving locally:", e.message);
+    const stat = fs.statSync(outPath);
+    console.log(`[patch-rtx] Patched to ${(stat.size / 1048576).toFixed(2)} MB`);
+
+    if (!stat.size || stat.size < 1024) {
+      throw new Error("ffmpeg produced an empty output");
     }
 
-    // 3) Send the patched file directly to the browser
+    // 2) Optional: upload to Cloudinary in the background (fire-and-forget)
+    //    We don't block the response on this — the user gets the file directly.
+    if (cloudinaryReady()) {
+      try {
+        // Read file in chunks and stream to Cloudinary
+        const rs = fs.createReadStream(outPath);
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: "video",
+            folder: CF_FOLDER,
+            public_id: `${CF_FOLDER}/${path.basename(filename, path.extname(filename)).replace(/[^\w.-]/g, "_")}_${Date.now()}_${newId(6)}`,
+            overwrite: false,
+          },
+          (err, result) => {
+            if (err) {
+              console.warn("[patch-rtx] Cloudinary upload failed:", err.message);
+              return;
+            }
+            const jobId = newId(24);
+            jobs.set(jobId, {
+              url: result.secure_url,
+              publicId: result.public_id,
+              name: filename,
+              size: stat.size,
+              expiresAt: Date.now() + JOB_TTL_MS,
+              finishedAt: Date.now(),
+            });
+            console.log(`[patch-rtx] Cloudinary backup saved: ${result.secure_url}`);
+          }
+        );
+        rs.pipe(uploadStream);
+      } catch (e) {
+        console.warn("[patch-rtx] Cloudinary backup skipped:", e.message);
+      }
+    }
+
+    // 3) STREAM the patched file to the browser (NO buffer in memory)
     res.setHeader("Content-Type", "video/mp4");
-    res.setHeader("Content-Length", String(patched.length));
-    res.end(patched);
+    res.setHeader("Content-Length", String(stat.size));
+    res.setHeader("X-Job-Id", newId(24));
+
+    const readStream = fs.createReadStream(outPath);
+    readStream.pipe(res);
+
+    readStream.on("close", () => {
+      try { fs.unlinkSync(outPath); } catch (e) {}
+    });
+    readStream.on("error", (err) => {
+      console.error("[patch-rtx] stream error:", err.message);
+      try { fs.unlinkSync(outPath); } catch (e) {}
+    });
   } catch (e) {
     console.error("[patch-rtx] failed:", e);
+    try { fs.unlinkSync(outPath); } catch (e2) {}
     res.status(500).json({ ok: false, error: e.message || "Patch failed." });
   } finally {
     try { fs.unlinkSync(inPath); } catch (e) {}
@@ -446,74 +483,78 @@ app.post("/api/patch-rtx", requireToken, upload.single("file"), async (req, res)
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   MP4 PATCHER — FFmpeg-based (low memory, streaming)
+   LOW-MEMORY FFMPEG WRAPPER
    ═══════════════════════════════════════════════════════════════ */
-
-/* Patch a file that already exists on disk (from multer) */
-async function patchMp4FromPath(inPath) {
-  const tmpDir = os.tmpdir();
-  const id = crypto.randomBytes(8).toString("hex");
-  const outPath = path.join(tmpDir, "jq_out_" + id + ".mp4");
-
-  try {
-    const inSize = fs.statSync(inPath).size;
-    console.log(`[patchMp4FromPath] input: ${(inSize / 1048576).toFixed(2)} MB`);
-
-    // Low-memory settings:
-    //   -threads 1        : single thread — much lower peak RAM
-    //   -c copy           : no re-encode, just remux
-    //   -movflags +faststart : moov at front
-    //   -maxbuffer 10 MB  : don't accumulate ffmpeg's stdout
-    await execFileAsync("ffmpeg", [
+function runFfmpegLowMem(inPath, outPath) {
+  return new Promise((resolve, reject) => {
+    // Minimal-memory settings:
+    //   -threads 1        : one thread
+    //   -c copy           : no re-encode
+    //   no +faststart     : avoid the second pass (the memory hog)
+    const args = [
       "-y",
       "-threads", "1",
       "-fflags", "+genpts",
       "-err_detect", "ignore_err",
       "-i", inPath,
       "-c", "copy",
-      "-movflags", "+faststart",
       "-metadata", "encoder=" + ENCODER_TAG,
       "-metadata", "comment=Optimized by JOHN_QUALITY",
       outPath,
-    ], {
-      timeout: 600000,               // 10 minutes max
-      maxBuffer: 10 * 1024 * 1024,   // 10 MB stdout buffer only
+    ];
+
+    const ff = spawn("ffmpeg", args, {
+      stdio: ["ignore", "ignore", "pipe"],
+      env: Object.assign({}, process.env, {
+        OMP_NUM_THREADS: "1",        // limit OpenMP threads
+        AV_LOG_FORCE_NOCOLOR: "1",
+      }),
     });
 
-    const stat = fs.statSync(outPath);
-    console.log(`[patchMp4FromPath] output: ${(stat.size / 1048576).toFixed(2)} MB`);
+    let stderrTail = "";
+    ff.stderr.on("data", (d) => {
+      stderrTail += d.toString();
+      if (stderrTail.length > 4000) stderrTail = stderrTail.slice(-4000);
+    });
 
-    if (!stat.size || stat.size < 1024) {
-      throw new Error("ffmpeg produced an empty output");
-    }
+    const killTimer = setTimeout(() => {
+      try { ff.kill("SIGKILL"); } catch (e) {}
+      reject(new Error("ffmpeg timed out after " + (FFMPEG_TIMEOUT / 1000) + "s"));
+    }, FFMPEG_TIMEOUT);
 
-    // Read output in 1 MB chunks to avoid a huge single allocation
-    const chunks = [];
-    const stream = fs.createReadStream(outPath, { highWaterMark: 1024 * 1024 });
-    for await (const chunk of stream) {
-      chunks.push(chunk);
-    }
-    return Buffer.concat(chunks);
-  } catch (e) {
-    console.error("[patchMp4FromPath] ffmpeg failed:", e.message);
-    throw new Error("Video optimization failed: " + (e.message || "unknown error"));
-  } finally {
-    try { fs.unlinkSync(outPath); } catch (e) {}
-  }
+    ff.on("error", (err) => {
+      clearTimeout(killTimer);
+      reject(err);
+    });
+
+    ff.on("close", (code) => {
+      clearTimeout(killTimer);
+      if (code === 0) {
+        resolve();
+      } else {
+        const lastLines = stderrTail.split("\n").filter(Boolean).slice(-3).join(" | ");
+        reject(new Error("ffmpeg exit " + code + ": " + lastLines));
+      }
+    });
+  });
 }
 
-/* Legacy in-memory version (kept for safety — not used by the endpoint) */
+/* Legacy in-memory patch (kept for safety, not used by the endpoint) */
 async function patchMp4(raw) {
   const tmpDir = os.tmpdir();
   const id = crypto.randomBytes(8).toString("hex");
-  const inPath = path.join(tmpDir, "jq_in_" + id + ".mp4");
-
+  const inPath = path.join(tmpDir, "jq_legacy_in_" + id + ".mp4");
+  const outPath = path.join(tmpDir, "jq_legacy_out_" + id + ".mp4");
   try {
     fs.writeFileSync(inPath, raw);
-    raw = null;
-    return await patchMp4FromPath(inPath);
+    await runFfmpegLowMem(inPath, outPath);
+    const chunks = [];
+    const stream = fs.createReadStream(outPath, { highWaterMark: 1024 * 1024 });
+    for await (const chunk of stream) chunks.push(chunk);
+    return Buffer.concat(chunks);
   } finally {
     try { fs.unlinkSync(inPath); } catch (e) {}
+    try { fs.unlinkSync(outPath); } catch (e) {}
   }
 }
 
@@ -604,7 +645,7 @@ if (require.main === module || process.env.VERCEL !== "1") {
     console.log("╔══════════════════════════════════════════════╗");
     console.log("║     JOHN_QUALITY Backend v2.0                ║");
     console.log("║     Railway · Google · Firestore · Cloudinary ║");
-    console.log("║     FFmpeg-based patcher (low-memory)        ║");
+    console.log("║     FFmpeg streaming (low-memory)            ║");
     console.log("╚══════════════════════════════════════════════╝");
     console.log(`  Port         : ${PORT}`);
     console.log(`  Public URL   : ${PUBLIC_BASE}`);
